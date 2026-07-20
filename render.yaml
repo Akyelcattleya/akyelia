@@ -82,4 +82,8 @@ services:
       - key: TOGETHER_API_KEY
         sync: false
 
+      # 🟠 OpenClaude Gateway (Gitlawb Opengateway)
+      - key: OPENCLAUDE_API_KEY
+        sync: false
+
       # 💻 Ollama (local, aucune clé requise)

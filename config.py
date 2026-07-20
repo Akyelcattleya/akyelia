@@ -218,6 +218,18 @@ class Config:
             description="Modeles open-source hebergés",
             setup_url="https://api.together.xyz/settings/api-keys"
         ),
+        # 🟠 OpenClaude - Gitlawb Opengateway (via OpenClaude CLI)
+        "openclaude": LLMProviderConfig(
+            name="openclaude", display_name="OpenClaude Gateway",
+            api_key_env="OPENCLAUDE_API_KEY",
+            base_url="https://opengateway.gitlawb.com/v1",
+            default_model="mimo-v2.5-pro",
+            models=["mimo-v2.5-pro", "mimo-v2.0-flash", "google/gemini-3.1-flash-lite-preview",
+                    "google/gemini-3.0-flash", "deepseek/deepseek-chat", "qwen/qwen-2.5-72b-instruct"],
+            api_type="openai", icon="🟠",
+            description="Gateway OpenClaude : Xiaomi MiMo, Gemini, DeepSeek et +",
+            setup_url="https://gitlawb.com/opengateway/keys"
+        ),
         # 💻 Ollama - Modèles locaux gratuits
         "ollama": LLMProviderConfig(
             name="ollama", display_name="Ollama (Local)",
