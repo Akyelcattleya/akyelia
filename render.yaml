@@ -19,3 +19,55 @@ services:
         value: "akyelia.db"
       - key: API_KEYS_FILE
         value: "api_keys.json"
+
+      # 🌟 OmniRoute (gratuit, aucune clé requise)
+
+      # 🟢 NVIDIA NIM (API gratuite pour le développement)
+      - key: NVIDIA_API_KEY
+        sync: false
+
+      # 🧠 DeepSeek
+      - key: DEEPSEEK_API_KEY
+        sync: false
+
+      # ✨ OpenAI / ChatGPT
+      - key: OPENAI_API_KEY
+        sync: false
+
+      # 🟣 Anthropic Claude
+      - key: ANTHROPIC_API_KEY
+        sync: false
+
+      # 🔵 Google Gemini (gratuit !)
+      - key: GEMINI_API_KEY
+        sync: false
+
+      # ⚡ Groq (inference ultra-rapide, gratuit)
+      - key: GROQ_API_KEY
+        sync: false
+
+      # 🇨🇳 Kimi / Moonshot
+      - key: KIMI_API_KEY
+        sync: false
+
+      # 🔮 Mistral AI
+      - key: MISTRAL_API_KEY
+        sync: false
+
+      # 🟡 Perplexity AI
+      - key: PERPLEXITY_API_KEY
+        sync: false
+
+      # 🎯 xAI / Grok
+      - key: XAI_API_KEY
+        sync: false
+
+      # 🌐 OpenRouter (200+ modèles, une seule clé)
+      - key: OPENROUTER_API_KEY
+        sync: false
+
+      # 🤝 Together AI
+      - key: TOGETHER_API_KEY
+        sync: false
+
+      # 💻 Ollama (local, aucune clé requise)
