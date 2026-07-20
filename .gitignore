@@ -1,0 +1,36 @@
+# AkyelIA - .gitignore
+
+# Database
+*.db
+*.db-journal
+*.db-wal
+
+# API Keys
+api_keys.json
+
+# Uploads
+uploads/*
+!uploads/.gitkeep
+
+# Skills directory (cloned repos)
+skills/*
+!skills/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

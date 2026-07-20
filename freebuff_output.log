@@ -1,0 +1,39 @@
+INFO:     Started server process [19276]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while attempting to bind on address ('0.0.0[OK] Freebuff demarre sur http://0.0.0.0:7777
+[INFO] Providers disponibles : deepseek, openai, anthropic, google, groq, ollama
+INFO:     127.0.0.1:51690 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51690 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51690 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50060 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58646 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58646 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58646 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52558 - "POST /api/chat HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:62340 - "POST /api/chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62340 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62340 - "GET /api/skills HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62340 - "POST /api/skills/install HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:62340 - "POST /api/skills/install HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50373 - "GET /api/skills HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50373 - "GET /api/skills HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50132 - "POST /api/skills/install HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:52311 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61696 - "POST /api/skills/install HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59680 - "GET /api/skills HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:55246 - "POST /api/skills/install HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65205 - "GET /api/skills HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:65207 - "POST /api/skills/install HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:59108 - "POST /api/skills/install HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:57513 - "GET /api/skills HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:60200 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64281 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54053 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52324 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52324 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52324 - "GET /api/conversations HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:50205 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50209 - "GET /api/models HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50212 - "POST /api/chat HTTP/1.1" 400 Bad Request
+INFO:     127.0.0.1:50213 - "GET /api/models HTTP/1.1" 200 OK

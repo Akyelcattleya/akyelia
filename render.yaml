@@ -1,0 +1,21 @@
+# AkyelIA - Render Blueprint Configuration
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: akyelia
+    runtime: python
+    plan: free
+    buildCommand: cd freebuff && pip install -r requirements.txt
+    startCommand: cd freebuff && uvicorn app:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: PORT
+        value: 10000
+      - key: DEFAULT_PROVIDER
+        value: "omniroute"
+      - key: DB_PATH
+        value: "akyelia.db"
+      - key: API_KEYS_FILE
+        value: "api_keys.json"
