@@ -338,7 +338,11 @@ class ProjectFileSave(BaseModel):
 async def startup():
     await init_database()
     # Détection dynamique des modèles gratuits OpenRouter
-    asyncio.create_task(refresh_dynamic_models())
+    try:
+        await asyncio.wait_for(refresh_dynamic_models(), timeout=12)
+    except asyncio.TimeoutError:
+        print("[FREE-FIRST] ⏱ Timeout refresh API → fallback modèles préférés")
+        refresh_dynamic_models()  # Lance en arrière-plan sans attendre
     if config.default_provider == "omniroute":
         asyncio.create_task(ensure_omniroute())
 
@@ -461,11 +465,10 @@ async def chat(request: ChatRequest):
     models_to_try = []
     
     # Pour openrouter : utiliser les modèles dynamiques détectés par l'API
+    free_chain_loaded = _dynamic_models_init
     if provider_name == "openrouter":
         active = get_active_models()
         models_to_try = list(active)
-        if _dynamic_models_init:
-            models_to_try.insert(0, "[INFO] Modèles détectés dynamiquement via OpenRouter API")
         print(f"[FREE-FIRST] Utilisation de {len(active)} modèles détectés dynamiquement")
     else:
         # Pour les autres providers : chaîne statique ou modèle par défaut
@@ -488,12 +491,11 @@ async def chat(request: ChatRequest):
     async def generate():
         last_error = None
         try:
+            # Message d'info sur les modèles détectés (avant la boucle)
+            if provider_name == "openrouter" and free_chain_loaded:
+                yield f"data: {json.dumps({'info': '🧠 Modèles gratuits détectés via OpenRouter API', 'conversation_id': conv_id})}\n\n"
+            
             for model_idx, try_model in enumerate(models_to_try):
-                # Skip the info string if present
-                if try_model.startswith("[INFO]"):
-                    yield f"data: {json.dumps({'info': try_model[7:].strip(), 'conversation_id': conv_id})}\n\n"
-                    continue
-                    
                 try:
                     full_response = ""
                     model_used = try_model
