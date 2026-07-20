@@ -19,20 +19,19 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && rm -rf /var/lib/apt/lists/* \
     && npm install -g npm@latest
 
-# Pre-cache OmniRoute globally (install au build, pas au run)
+# Pre-cache OmniRoute globalement (installe au build, disponible au run)
 RUN npm install -g omniroute@latest
 
-# Copy requirements first for better caching
+# Copier les dépendances Python pour le cache Docker
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copier tout le code
 COPY . .
 
-# Create data directory for persistence
+# Dossier persistant
 RUN mkdir -p /data
 
-# Port for AkyelIA (Render attribue dynamiquement)
 ENV PORT=10000
 ENV DB_PATH=/data/akyelia.db
 ENV API_KEYS_FILE=/data/api_keys.json
@@ -44,10 +43,20 @@ EXPOSE 10000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:$PORT/')" || exit 1
 
-# Start OmniRoute en arrière-plan puis AkyelIA
+# Script de demarrage : lance OmniRoute, attend qu'il soit pret, puis lance AkyelIA
 CMD ["sh", "-c", "\
-    npx omniroute serve --port 20128 --daemon 2>/dev/null & \
-    echo '[OK] OmniRoute demarre sur localhost:20128'; \
-    sleep 3; \
+    echo '[OK] Demarrage OmniRoute...'; \
+    omniroute serve --port 20128 & \
+    OMNI_PID=$!; \
+    echo '[OK] Attente OmniRoute (PID: '$OMNI_PID')...'; \
+    for i in $(seq 1 15); do \
+        if curl -s http://localhost:20128/v1/models > /dev/null 2>&1; then \
+            echo '[OK] OmniRoute pret !'; \
+            break; \
+        fi; \
+        echo '  Tentative '$i'/15...'; \
+        sleep 2; \
+    done; \
+    echo '[OK] Demarrage AkyelIA...'; \
     python -m uvicorn app:app --host 0.0.0.0 --port ${PORT:-10000} --workers 2 --timeout-keep-alive 120 --forwarded-allow-ips '*' \
 "]
