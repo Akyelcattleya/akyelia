@@ -44,7 +44,7 @@ class Config:
         "omniroute": LLMProviderConfig(
             name="omniroute", display_name="OmniRoute",
             api_key_env="",
-            base_url="http://localhost:20128/v1",
+            base_url=os.getenv("OMNIROUTE_URL", "http://localhost:20128/v1"),
             default_model="auto/pro-coding",
             models=[
                 # 🎯 Routing intelligent
