@@ -151,20 +151,38 @@ async def ensure_omniroute():
 # ============================================
 SMART_MODEL_CHAIN = {
     "omniroute": [
-        # 🥇 Routing intelligent - choisit le meilleur modèle pour chaque tâche
-        "auto/smart",
-        # 🥈 Meilleurs modèles open-source (équivalents Fable 5)
-        "oc/minimax-m3-free",        # MiniMax M3 - open-weight, top code
-        "oc/deepseek-v4-flash-free",  # DeepSeek V4 Flash - open-source
-        "oc/qwen3.6-plus-free",       # Qwen 3.6 Plus - open-weight
-        "oc/nemotron-3-super-free",   # Nemotron 3 Super - open-weight
-        # 🥉 Modèles gratuits supplémentaires
-        "tllm/CLAUDE_4_6_OPUS",     # Claude 4.6 Opus (free tier)
-        "tllm/GPT_5",               # GPT-5 (free tier)
-        "tllm/gemini_3_pro",        # Gemini 3 Pro (free tier)
-        # 4️⃣ Fallback gratuit solide
-        "auto/best-free",           # Meilleur gratuit disponible
-        "auto/coding:free",         # Meilleur code gratuit
+        # 🎭 CLAUDE - Chef d'orchestre (modèle principal N°1)
+        "tllm/CLAUDE_4_6_OPUS",        # 🥇 Claude Opus 4.6 - LE + PUISSANT (raisonnement, code, tout)
+        "tllm/CLAUDE_4_6_SONNET",      # 🥇 Claude Sonnet 4.6 - Top code & vitesse
+        "aug/claude-opus-4.6",          # 🥇 Claude Opus 4.6 (Alt) - Backup
+        "aug/claude-sonnet-4.6",        # 🥇 Claude Sonnet 4.6 (Alt) - Backup
+        # 🥈 TOP MODÈLES PROPRIÉTAIRES
+        "tllm/GPT_5",                  # 🥈 GPT-5 - Généraliste ultra-puissant
+        "tllm/GPT_5_4",                # GPT-5.4 - Réflexion approfondie
+        "tllm/gemini_3_pro",           # 🥈 Gemini 3 Pro - Multimodal géant
+        "tllm/gemini_2_5_pro",         # Gemini 2.5 Pro - Raisonnement
+        "tllm/deepseek_v4",            # DeepSeek V4 - Code expert
+        # 🥉 MEILLEURS OPEN-SOURCE
+        "oc/minimax-m3-free",          # 🥉 MiniMax M3 - Top open-weight
+        "oc/deepseek-v4-flash-free",   # DeepSeek V4 Flash - Ultra-rapide
+        "oc/qwen3.6-plus-free",        # Qwen 3.6 Plus - Grand contexte
+        "oc/nemotron-3-super-free",    # Nemotron 3 Super - Open-weight
+        # 4️⃣ MODÈLES LÉGERS & SPÉCIALISÉS
+        "tllm/CLAUDE_4_5_HAIKU",       # Claude Haiku - Ultra-rapide
+        "tllm/GPT_o4_mini",            # GPT o4 mini - Petit mais costaud
+        "tllm/gemini_2_0_flash",       # Gemini Flash - Léger & gratuit
+        "tllm/gemini_3_flash",         # Gemini 3 Flash - Nouveau flash
+        "aug/claude-haiku-4.5",        # Claude Haiku (Alt)
+        "aug/gpt-5.5-high",            # GPT-5.5 High
+        "aug/gpt-5.5-medium",          # GPT-5.5 Medium
+        # 5️⃣ ROUTAGE INTELLIGENT (fallback auto)
+        "auto/smart",                  # Routage intelligent OmniRoute
+        "auto/pro-coding",             # Pro coding routing
+        "auto/pro-reasoning",          # Pro reasoning routing
+        "auto/best-free",              # Meilleur gratuit dispo
+        "auto/coding:free",            # Meilleur code gratuit
+        "auto/best-chat",              # Meilleur chat
+        "auto/best-fast",              # Le plus rapide
     ],
     "nvidia": [
         "meta/llama-3.3-70b-instruct",      # 🥇 Meilleur NVIDIA

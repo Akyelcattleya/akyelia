@@ -45,7 +45,7 @@ class Config:
             name="omniroute", display_name="OmniRoute",
             api_key_env="",
             base_url=os.getenv("OMNIROUTE_URL", "http://localhost:20128/v1"),
-            default_model="auto/pro-coding",
+            default_model="tllm/CLAUDE_4_6_OPUS",    # 🎭 Claude Opus 4.6 = chef d'orchestre
             models=[
                 # 🎯 Routing intelligent
                 "auto/best-free", "auto/best-coding", "auto/best-reasoning",
