@@ -18,7 +18,7 @@ services:
       - key: PORT
         value: 10000
       - key: DEFAULT_PROVIDER
-        value: "openrouter"
+        value: "anthropic"
       - key: DB_PATH
         value: "/data/akyelia.db"
       - key: API_KEYS_FILE
