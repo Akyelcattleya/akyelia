@@ -342,7 +342,7 @@ async def startup():
         await asyncio.wait_for(refresh_dynamic_models(), timeout=12)
     except asyncio.TimeoutError:
         print("[FREE-FIRST] ⏱ Timeout refresh API → fallback modèles préférés")
-        refresh_dynamic_models()  # Lance en arrière-plan sans attendre
+        asyncio.create_task(refresh_dynamic_models())  # Lance en arrière-plan
     if config.default_provider == "omniroute":
         asyncio.create_task(ensure_omniroute())
 
