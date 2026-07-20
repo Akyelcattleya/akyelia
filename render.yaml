@@ -10,7 +10,7 @@ databases:
 services:
   - type: web
     name: akyelia
-    runtime: docker
+    env: docker
     plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
