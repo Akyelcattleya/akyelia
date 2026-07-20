@@ -20,7 +20,7 @@ services:
       - key: PORT
         value: 10000
       - key: DEFAULT_PROVIDER
-        value: "openrouter"
+        value: "groq"
       - key: DB_PATH
         value: "akyelia.db"
       - key: API_KEYS_FILE
