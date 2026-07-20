@@ -1,6 +1,12 @@
 # AkyelIA - Render Blueprint Configuration
 # https://render.com/docs/blueprint-spec
 
+databases:
+  - name: akyelia-db
+    databaseName: akyelia
+    plan: free
+    ipAllowList: []
+
 services:
   - type: web
     name: akyelia
@@ -19,6 +25,12 @@ services:
         value: "akyelia.db"
       - key: API_KEYS_FILE
         value: "api_keys.json"
+
+      # 🔗 Connexion PostgreSQL (créé automatiquement par Render)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: akyelia-db
+          property: connectionString
 
       # 🌟 OmniRoute (gratuit, aucune clé requise)
 

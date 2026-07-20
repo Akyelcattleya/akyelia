@@ -11,7 +11,6 @@ import mimetypes
 from pathlib import Path
 from datetime import datetime
 
-import aiosqlite
 import httpx
 import asyncio
 from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form
@@ -22,6 +21,7 @@ from pydantic import BaseModel
 
 from config import config
 from llm_providers import get_provider, get_available_providers
+from db import Database, IS_POSTGRES, init_database
 
 app = FastAPI(title="AkyelIA", version="2.0.0")
 
@@ -39,7 +39,6 @@ static_dir = BASE_DIR / "static"
 static_dir.mkdir(exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
-DB_PATH = BASE_DIR / config.db_path
 API_KEYS_PATH = BASE_DIR / config.api_keys_file
 SKILLS_DIR = BASE_DIR / "skills"
 SKILLS_DIR.mkdir(exist_ok=True)
@@ -53,97 +52,8 @@ CODE_EXTENSIONS = {".py", ".js", ".ts", ".jsx", ".tsx", ".html", ".css", ".scss"
 
 
 # ============================================
-# DATABASE
+# DATABASE - Utilise db.py (SQLite local / PostgreSQL sur Render)
 # ============================================
-async def get_db():
-    db = await aiosqlite.connect(str(DB_PATH))
-    db.row_factory = aiosqlite.Row
-    await db.execute("PRAGMA journal_mode=WAL")
-    await db.execute("PRAGMA foreign_keys=ON")
-    return db
-
-
-async def init_db():
-    db = await get_db()
-    try:
-        await db.executescript("""
-            CREATE TABLE IF NOT EXISTS conversations (
-                id TEXT PRIMARY KEY,
-                title TEXT NOT NULL DEFAULT 'Nouvelle conversation',
-                provider TEXT NOT NULL DEFAULT 'deepseek',
-                model TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE IF NOT EXISTS messages (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                conversation_id TEXT NOT NULL,
-                role TEXT NOT NULL,
-                content TEXT NOT NULL,
-                provider TEXT,
-                model TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
-            );
-            CREATE INDEX IF NOT EXISTS idx_messages_conv ON messages(conversation_id);
-            CREATE INDEX IF NOT EXISTS idx_conversations_updated ON conversations(updated_at DESC);
-
-            CREATE TABLE IF NOT EXISTS skills (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                repo_url TEXT NOT NULL,
-                description TEXT DEFAULT '',
-                author TEXT DEFAULT '',
-                installed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                enabled INTEGER DEFAULT 1,
-                skill_path TEXT NOT NULL,
-                repo_full_name TEXT DEFAULT ''
-            );
-            CREATE INDEX IF NOT EXISTS idx_skills_name ON skills(name);
-
-            CREATE TABLE IF NOT EXISTS agents (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT DEFAULT '',
-                system_prompt TEXT DEFAULT '',
-                provider TEXT DEFAULT 'omniroute',
-                model TEXT DEFAULT '',
-                temperature REAL DEFAULT 0.7,
-                max_tokens INTEGER DEFAULT 4096,
-                icon TEXT DEFAULT '🤖',
-                color TEXT DEFAULT '#7c3aed',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE INDEX IF NOT EXISTS idx_agents_updated ON agents(updated_at DESC);
-
-            CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                description TEXT DEFAULT '',
-                language TEXT DEFAULT '',
-                icon TEXT DEFAULT '📁',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE INDEX IF NOT EXISTS idx_projects_updated ON projects(updated_at DESC);
-
-            CREATE TABLE IF NOT EXISTS project_files (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id TEXT NOT NULL,
-                path TEXT NOT NULL,
-                content TEXT DEFAULT '',
-                language TEXT DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-                UNIQUE(project_id, path)
-            );
-            CREATE INDEX IF NOT EXISTS idx_project_files_path ON project_files(project_id, path);
-        """)
-        await db.commit()
-    finally:
-        await db.close()
 
 
 # ============================================
@@ -328,7 +238,7 @@ class ProjectFileSave(BaseModel):
 # ============================================
 @app.on_event("startup")
 async def startup():
-    await init_db()
+    await init_database()
     # Demarrage automatique d'OmniRoute (non bloquant)
     asyncio.create_task(ensure_omniroute())
 
@@ -390,7 +300,7 @@ async def chat(request: ChatRequest):
             )
 
     conv_id = request.conversation_id or str(uuid.uuid4())
-    db = await get_db()
+    db = await Database.open()
     
     # Setup DB : créer/charger conversation, message utilisateur
     try:
@@ -520,7 +430,7 @@ async def chat(request: ChatRequest):
 # ========== CONVERSATIONS ==========
 @app.get("/api/conversations")
 async def list_conversations():
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT id, title, provider, model, created_at, updated_at "
@@ -533,7 +443,7 @@ async def list_conversations():
 
 @app.get("/api/conversations/{conv_id}")
 async def get_conversation(conv_id: str):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT id, title, provider, model, created_at, updated_at FROM conversations WHERE id = ?", (conv_id,)
@@ -551,7 +461,7 @@ async def get_conversation(conv_id: str):
 
 @app.delete("/api/conversations/{conv_id}")
 async def delete_conversation(conv_id: str):
-    db = await get_db()
+    db = await Database.open()
     try:
         await db.execute("DELETE FROM messages WHERE conversation_id = ?", (conv_id,))
         await db.execute("DELETE FROM conversations WHERE id = ?", (conv_id,))
@@ -566,7 +476,7 @@ async def clear_conversation(request: Request):
     data = await request.json()
     conv_id = data.get("conversation_id")
     if conv_id:
-        db = await get_db()
+        db = await Database.open()
         try:
             await db.execute("DELETE FROM messages WHERE conversation_id = ?", (conv_id,))
             await db.execute("UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conv_id,))
@@ -580,7 +490,7 @@ async def clear_conversation(request: Request):
 async def update_conversation_title(conv_id: str, request: Request):
     data = await request.json()
     title = data.get("title", "")
-    db = await get_db()
+    db = await Database.open()
     try:
         await db.execute("UPDATE conversations SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", (title, conv_id))
         await db.commit()
@@ -655,7 +565,7 @@ async def _clone_and_install(repo_url: str, db) -> dict | str:
 @app.post("/api/skills/install-trending")
 async def install_trending():
     """Install all trending AI repos as skills."""
-    db = await get_db()
+    db = await Database.open()
     results = {"success": [], "skipped": [], "errors": []}
     try:
         for repo_url in TRENDING_AI_REPOS:
@@ -681,7 +591,7 @@ async def install_multiple(request: Request):
     if len(urls) > 50:
         raise HTTPException(status_code=400, detail="Maximum 50 repos à la fois")
     
-    db = await get_db()
+    db = await Database.open()
     results = {"success": [], "skipped": [], "errors": []}
     try:
         for repo_url in urls:
@@ -698,7 +608,7 @@ async def install_multiple(request: Request):
 @app.get("/api/skills")
 async def list_skills():
     """List all installed skills."""
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT id, name, repo_url, description, author, installed_at, enabled, skill_path, repo_full_name "
@@ -731,7 +641,7 @@ async def install_skill(request: InstallSkillRequest):
     skill_name = repo_full.split("/")[-1] if "/" in repo_full else repo_full
 
     # Check if already installed
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT id FROM skills WHERE repo_url = ? OR name = ?", (repo_url, skill_name))
         existing = await cursor.fetchone()
@@ -788,7 +698,7 @@ async def install_skill(request: InstallSkillRequest):
 @app.post("/api/skills/scan")
 async def scan_skills():
     """Scan local skills directory and sync with database."""
-    db = await get_db()
+    db = await Database.open()
     try:
         # Get existing skills
         cursor = await db.execute("SELECT id, name, skill_path FROM skills")
@@ -839,7 +749,7 @@ async def scan_skills():
 @app.delete("/api/skills/{skill_id}")
 async def delete_skill(skill_id: int):
     """Delete a skill."""
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT id, skill_path FROM skills WHERE id = ?", (skill_id,))
         skill = await cursor.fetchone()
@@ -861,7 +771,7 @@ async def delete_skill(skill_id: int):
 @app.put("/api/skills/{skill_id}/toggle")
 async def toggle_skill(skill_id: int):
     """Toggle a skill's enabled status."""
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT id, enabled, name FROM skills WHERE id = ?", (skill_id,))
         skill = await cursor.fetchone()
@@ -879,7 +789,7 @@ async def toggle_skill(skill_id: int):
 @app.get("/api/skills/{skill_id}/explore")
 async def explore_skill(skill_id: int):
     """Explore a skill's files and content."""
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT name, skill_path, description FROM skills WHERE id = ?", (skill_id,))
         skill = await cursor.fetchone()
@@ -1001,7 +911,7 @@ FEATURED_REPOS = [
 async def marketplace_featured():
     """Get featured/popular repositories."""
     # Check installed skills to mark them
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT repo_full_name, name FROM skills")
         installed = {row["repo_full_name"]: row["name"] for row in await cursor.fetchall()}
@@ -1043,7 +953,7 @@ async def marketplace_search(q: str = ""):
             items = data.get("items", [])[:15]
 
             # Check which are already installed
-            db = await get_db()
+            db = await Database.open()
             try:
                 cursor = await db.execute("SELECT repo_full_name FROM skills")
                 installed = {row["repo_full_name"] for row in await cursor.fetchall()}
@@ -1088,7 +998,7 @@ async def marketplace_trending():
             data = r.json()
             items = data.get("items", [])[:10]
 
-            db = await get_db()
+            db = await Database.open()
             try:
                 cursor = await db.execute("SELECT repo_full_name FROM skills")
                 installed = {row["repo_full_name"] for row in await cursor.fetchall()}
@@ -1169,7 +1079,7 @@ async def web_search_endpoint(request: Request):
 # ============================================
 @app.get("/api/conversations/{conv_id}/export")
 async def export_conversation(conv_id: str, fmt: str = "markdown"):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT id, title, provider, model FROM conversations WHERE id = ?", (conv_id,))
         conv = await cursor.fetchone()
@@ -1204,7 +1114,7 @@ async def export_conversation(conv_id: str, fmt: str = "markdown"):
 # ============================================
 @app.get("/api/agents")
 async def list_agents():
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT * FROM agents ORDER BY updated_at DESC")
         agents = [dict(r) for r in await cursor.fetchall()]
@@ -1215,7 +1125,7 @@ async def list_agents():
 
 @app.get("/api/agents/{agent_id}")
 async def get_agent(agent_id: str):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,))
         agent = await cursor.fetchone()
@@ -1229,7 +1139,7 @@ async def get_agent(agent_id: str):
 @app.post("/api/agents", status_code=201)
 async def create_agent(request: AgentCreate):
     agent_id = str(uuid.uuid4())
-    db = await get_db()
+    db = await Database.open()
     try:
         await db.execute(
             "INSERT INTO agents (id, name, description, system_prompt, provider, model, temperature, max_tokens, icon, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -1244,7 +1154,7 @@ async def create_agent(request: AgentCreate):
 
 @app.put("/api/agents/{agent_id}")
 async def update_agent(agent_id: str, request: AgentUpdate):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,))
         existing = await cursor.fetchone()
@@ -1271,7 +1181,7 @@ async def update_agent(agent_id: str, request: AgentUpdate):
 
 @app.delete("/api/agents/{agent_id}")
 async def delete_agent(agent_id: str):
-    db = await get_db()
+    db = await Database.open()
     try:
         await db.execute("DELETE FROM agents WHERE id = ?", (agent_id,))
         await db.commit()
@@ -1285,7 +1195,7 @@ async def delete_agent(agent_id: str):
 # ============================================
 @app.get("/api/projects")
 async def list_projects():
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT p.*, (SELECT COUNT(*) FROM project_files WHERE project_id = p.id) as file_count "
@@ -1299,7 +1209,7 @@ async def list_projects():
 
 @app.get("/api/projects/{project_id}")
 async def get_project(project_id: str):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT p.*, (SELECT COUNT(*) FROM project_files WHERE project_id = p.id) as file_count "
@@ -1316,7 +1226,7 @@ async def get_project(project_id: str):
 @app.post("/api/projects", status_code=201)
 async def create_project(request: ProjectCreate):
     project_id = str(uuid.uuid4())
-    db = await get_db()
+    db = await Database.open()
     try:
         await db.execute(
             "INSERT INTO projects (id, name, description, language, icon) VALUES (?, ?, ?, ?, ?)",
@@ -1332,7 +1242,7 @@ async def create_project(request: ProjectCreate):
 @app.put("/api/projects/{project_id}")
 async def update_project(project_id: str, request: Request):
     data = await request.json()
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute("SELECT * FROM projects WHERE id = ?", (project_id,))
         existing = await cursor.fetchone()
@@ -1359,7 +1269,7 @@ async def update_project(project_id: str, request: Request):
 
 @app.delete("/api/projects/{project_id}")
 async def delete_project(project_id: str):
-    db = await get_db()
+    db = await Database.open()
     try:
         await db.execute("DELETE FROM project_files WHERE project_id = ?", (project_id,))
         await db.execute("DELETE FROM projects WHERE id = ?", (project_id,))
@@ -1374,7 +1284,7 @@ async def delete_project(project_id: str):
 # ============================================
 @app.get("/api/projects/{project_id}/files")
 async def list_project_files(project_id: str):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT id, path, language, created_at, updated_at FROM project_files WHERE project_id = ? ORDER BY path",
@@ -1388,7 +1298,7 @@ async def list_project_files(project_id: str):
 
 @app.get("/api/projects/{project_id}/files/{file_id}")
 async def get_project_file(project_id: str, file_id: int):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT * FROM project_files WHERE id = ? AND project_id = ?", (file_id, project_id)
@@ -1403,7 +1313,7 @@ async def get_project_file(project_id: str, file_id: int):
 
 @app.post("/api/projects/{project_id}/files", status_code=201)
 async def create_project_file(project_id: str, request: ProjectFileSave):
-    db = await get_db()
+    db = await Database.open()
     try:
         # Check project exists
         cursor = await db.execute("SELECT id FROM projects WHERE id = ?", (project_id,))
@@ -1425,7 +1335,7 @@ async def create_project_file(project_id: str, request: ProjectFileSave):
         await db.execute("UPDATE projects SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (project_id,))
         await db.commit()
         
-        file_id = cursor.lastrowid
+        file_id = db.lastrowid
         cursor = await db.execute("SELECT * FROM project_files WHERE id = ?", (file_id,))
         return dict(await cursor.fetchone())
     finally:
@@ -1434,7 +1344,7 @@ async def create_project_file(project_id: str, request: ProjectFileSave):
 
 @app.put("/api/projects/{project_id}/files/{file_id}")
 async def update_project_file(project_id: str, file_id: int, request: ProjectFileSave):
-    db = await get_db()
+    db = await Database.open()
     try:
         cursor = await db.execute(
             "SELECT * FROM project_files WHERE id = ? AND project_id = ?", (file_id, project_id)
@@ -1459,7 +1369,7 @@ async def update_project_file(project_id: str, file_id: int, request: ProjectFil
 
 @app.delete("/api/projects/{project_id}/files/{file_id}")
 async def delete_project_file(project_id: str, file_id: int):
-    db = await get_db()
+    db = await Database.open()
     try:
         await db.execute("DELETE FROM project_files WHERE id = ? AND project_id = ?", (file_id, project_id))
         await db.commit()
