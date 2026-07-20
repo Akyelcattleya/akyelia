@@ -10,10 +10,10 @@ databases:
 services:
   - type: web
     name: akyelia
-    env: docker
+    runtime: python
     plan: free
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn app:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 120 --forwarded-allow-ips '*'
     envVars:
       - key: PORT
         value: 10000
@@ -23,14 +23,18 @@ services:
         value: "/data/akyelia.db"
       - key: API_KEYS_FILE
         value: "/data/api_keys.json"
-      - key: OMNIROUTE_URL
-        value: "http://localhost:20128/v1"
+      - key: PYTHON_VERSION
+        value: "3.12.9"
 
       # 🔗 Connexion PostgreSQL (créé automatiquement par Render)
       - key: DATABASE_URL
         fromDatabase:
           name: akyelia-db
           property: connectionString
+
+      # 🌐 OpenRouter (200+ modèles, une seule clé)
+      - key: OPENROUTER_API_KEY
+        sync: false
 
       # 🟢 NVIDIA NIM (API gratuite pour le développement)
       - key: NVIDIA_API_KEY
@@ -72,10 +76,6 @@ services:
       - key: XAI_API_KEY
         sync: false
 
-      # 🌐 OpenRouter (200+ modèles, une seule clé)
-      - key: OPENROUTER_API_KEY
-        sync: false
-
       # 🤝 Together AI
       - key: TOGETHER_API_KEY
         sync: false
@@ -83,5 +83,3 @@ services:
       # 🟠 OpenClaude Gateway (Gitlawb Opengateway)
       - key: OPENCLAUDE_API_KEY
         sync: false
-
-      # 💻 Ollama (local, aucune clé requise)
