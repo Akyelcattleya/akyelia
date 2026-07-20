@@ -232,7 +232,7 @@ class AgentCreate(BaseModel):
     name: str
     description: str = ""
     system_prompt: str = ""
-    provider: str = "omniroute"
+    provider: str = "openrouter"
     model: str = ""
     temperature: float = 0.7
     max_tokens: int = 4096
@@ -268,8 +268,9 @@ class ProjectFileSave(BaseModel):
 @app.on_event("startup")
 async def startup():
     await init_database()
-    # Demarrage automatique d'OmniRoute (non bloquant)
-    asyncio.create_task(ensure_omniroute())
+    # Demarrage automatique d'OmniRoute si c'est le provider par defaut
+    if config.default_provider == "omniroute":
+        asyncio.create_task(ensure_omniroute())
 
 
 @app.get("/", response_class=HTMLResponse)
