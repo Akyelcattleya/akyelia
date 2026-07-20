@@ -13,7 +13,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: python -m uvicorn app:app --host 0.0.0.0 --port $PORT --workers 2 --timeout-keep-alive 120 --forwarded-allow-ips '*'
+    startCommand: python -m uvicorn app:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 120 --forwarded-allow-ips '*'
     envVars:
       - key: PORT
         value: 10000
@@ -24,7 +24,7 @@ services:
       - key: API_KEYS_FILE
         value: "/data/api_keys.json"
       - key: PYTHON_VERSION
-        value: "3.12.9"
+        value: "3.12"
 
       # 🔗 Connexion PostgreSQL (créé automatiquement par Render)
       - key: DATABASE_URL
