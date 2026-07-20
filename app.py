@@ -199,7 +199,7 @@ DEFAULT_FALLBACK = "google/gemini-2.0-flash"
 # ============================================
 class ChatRequest(BaseModel):
     message: str
-    provider: str = "deepseek"
+    provider: str = "openrouter"
     model: str | None = None
     conversation_id: str | None = None
     temperature: float = 0.7
