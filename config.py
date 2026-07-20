@@ -199,9 +199,14 @@ class Config:
             name="openrouter", display_name="OpenRouter",
             api_key_env="OPENROUTER_API_KEY",
             base_url="https://openrouter.ai/api/v1",
-            default_model="anthropic/claude-sonnet-4",
-            models=["anthropic/claude-sonnet-4", "openai/gpt-4o", "google/gemini-2.0-flash",
-                    "meta-llama/llama-3.3-70b-instruct", "deepseek/deepseek-chat", "qwen/qwen-2.5-72b-instruct"],
+            default_model="google/gemini-2.0-flash",  # 🆓 Gratuit sur OpenRouter
+            models=["google/gemini-2.0-flash",                    # 🆓 Gemini - toujours gratuit
+                    "meta-llama/llama-3.3-70b-instruct",         # 🆓 Llama - toujours gratuit
+                    "mistralai/mistral-small-24b-instruct-2501",  # 🆓 Mistral - toujours gratuit
+                    "deepseek/deepseek-chat",                     # 🆓 DeepSeek - quasi gratuit
+                    "anthropic/claude-sonnet-4",
+                    "openai/gpt-4o",
+                    "qwen/qwen-2.5-72b-instruct"],
             api_type="openai", icon="🌐",
             description="200+ modeles. Une seule clé pour tous les accès",
             setup_url="https://openrouter.ai/keys"

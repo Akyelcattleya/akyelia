@@ -184,6 +184,17 @@ SMART_MODEL_CHAIN = {
         "auto/best-chat",              # Meilleur chat
         "auto/best-fast",              # Le plus rapide
     ],
+    "openrouter": [
+        # 🎯 CHAÎNE DE ROUTAGE OPENROUTER - Modèles gratuits d'abord
+        "google/gemini-2.0-flash",                    # 🆓 N°1 Gemini 2.0 Flash - Gratuit, rapide, puissant
+        "meta-llama/llama-3.3-70b-instruct",          # 🆓 N°2 Llama 3.3 70B - Excellent raisonnement
+        "mistralai/mistral-small-24b-instruct-2501",   # 🆓 N°3 Mistral Small 24B - Nouveau, performant
+        "deepseek/deepseek-chat",                      # 🆓 N°4 DeepSeek - Top code
+        "qwen/qwen-2.5-72b-instruct",                  # 🆓 N°5 Qwen 2.5 72B - Grand contexte
+        # Modèles payants (fallback si l'utilisateur a des credits)
+        "anthropic/claude-sonnet-4",
+        "openai/gpt-4o",
+    ],
     "nvidia": [
         "meta/llama-3.3-70b-instruct",      # 🥇 Meilleur NVIDIA
         "nvidia/llama-3.3-nemotron-super-49b-v1", # 🥈 Nemotron
