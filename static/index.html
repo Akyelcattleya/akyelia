@@ -2807,11 +2807,11 @@ function openProjectChat(){
 // ═══════════════════════════════════════════════
 async function init(){
   loadConversations();
-  // Try OmniRoute
+  // Utiliser le provider par defaut du serveur (openrouter, omniroute, etc.)
   try {
     const cfg = await api('GET','/api/config');
+    S.provider = cfg.default_provider || 'openrouter';
     if(cfg.default_provider==='omniroute'){
-      S.provider = 'omniroute';
       $('mN').textContent = 'Akyel AI Auto';
     }
   } catch(e){}
