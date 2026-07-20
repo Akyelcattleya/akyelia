@@ -44,6 +44,10 @@ services:
       - key: DEEPSEEK_API_KEY
         sync: false
 
+      # 🟤 Zhipu AI / GLM
+      - key: GLM_API_KEY
+        sync: false
+
       # ✨ OpenAI / ChatGPT
       - key: OPENAI_API_KEY
         sync: false

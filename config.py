@@ -150,6 +150,17 @@ class Config:
             description="Gratuit ! Inference ultra-rapide (Llama, Mixtral...)",
             setup_url="https://console.groq.com/keys"
         ),
+        # 🟤 Zhipu AI / GLM - Le meilleur modèle chinois
+        "glm": LLMProviderConfig(
+            name="glm", display_name="Zhipu GLM",
+            api_key_env="GLM_API_KEY",
+            base_url="https://open.bigmodel.cn/api/paas/v4",
+            default_model="glm-4-plus",
+            models=["glm-4-plus", "glm-4-air", "glm-4-0520", "glm-4-flash", "glm-4v-plus", "glm-4v"],
+            api_type="openai", icon="🟤",
+            description="GLM-4 Plus : top modele chinois, excellent raisonnement",
+            setup_url="https://open.bigmodel.cn/usercenter/apikeys"
+        ),
         # 🇨🇳 Kimi / Moonshot (mentionné par l'utilisateur)
         "kimi": LLMProviderConfig(
             name="kimi", display_name="Kimi (Moonshot)",
