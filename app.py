@@ -84,7 +84,6 @@ def extract_readme_text(repo_path: Path) -> str:
         readme = repo_path / name
         if readme.exists():
             text = readme.read_text(encoding="utf-8", errors="ignore")
-            # Extract first paragraph (up to 300 chars)
             lines = text.split("\n")
             desc_lines = []
             for line in lines:
@@ -99,7 +98,6 @@ def extract_readme_text(repo_path: Path) -> str:
 
 
 def get_repo_author(repo_url: str) -> str:
-    """Extract author/owner from GitHub URL."""
     url = repo_url.rstrip("/").replace(".git", "")
     if "github.com" in url:
         parts = url.split("github.com/")[-1].split("/")
@@ -108,7 +106,6 @@ def get_repo_author(repo_url: str) -> str:
 
 
 def get_repo_full_name(repo_url: str) -> str:
-    """Extract owner/repo from GitHub URL."""
     url = repo_url.rstrip("/").replace(".git", "")
     if "github.com" in url:
         return url.split("github.com/")[-1]
@@ -121,7 +118,6 @@ def get_repo_full_name(repo_url: str) -> str:
 OMNIROUTE_URL = "http://localhost:20128"
 
 async def ensure_omniroute():
-    """Verifie si OmniRoute tourne, sinon le demarre."""
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             r = await client.get(f"{OMNIROUTE_URL}/v1/models")
@@ -131,7 +127,6 @@ async def ensure_omniroute():
     except Exception:
         pass
     
-    # OmniRoute ne repond pas, on le lance
     print("[INFO] Demarrage d'OmniRoute...")
     try:
         process = await asyncio.create_subprocess_shell(
@@ -147,51 +142,139 @@ async def ensure_omniroute():
 
 
 # ============================================
-# FREE-FIRST ROUTING - Cascade multi-providers 100% gratuite
+# DYNAMIC FREE-FIRST ROUTING
+# Détection automatique des modèles gratuits via l'API OpenRouter
 # ============================================
-# Stratégie : essayer les modèles gratuits d'abord, les quasi-gratuits ensuite,
-# et les payants en TOUT dernier recours. Les tokens sont précieux !
 
-# 🆓 FREE_MODEL_CHAIN : Modèles open-source/rate-limités connus pour être gratuits
-# Ces modèles sont accessibles via OpenRouter sans carte bancaire
-FREE_MODEL_CHAIN = [
-    # 🥇 TIER 1 - Gratuits 100% (même sans crédit OpenRouter)
-    "google/gemini-2.0-flash",                    # 🆓 Gemini Flash - rapide, polyvalent
-    "google/gemini-2.0-flash-lite",               # 🆓 Gemini Flash Lite - ultra léger
-    "meta-llama/llama-3.3-70b-instruct",          # 🆓 Llama 3.3 70B - excellent raisonnement
-    "mistralai/mistral-small-24b-instruct-2501",   # 🆓 Mistral Small - nouveau gratuit
-    # 🥈 TIER 2 - Quasi gratuits (quelques centimes pour 1M tokens)
-    "deepseek/deepseek-chat",                      # 💰 DeepSeek V3 - $0.014/M tokens (quasi rien)
-    "qwen/qwen-2.5-72b-instruct",                  # 💰 Qwen 2.5 - excellent rapport qualité/prix
-    # 🥉 TIER 3 - Fallback gratuits supplémentaires
-    "microsoft/phi-4-mini-instruct",
-    "qwen/qwen-2.5-coder-32b-instruct",
+# Modèles préférés connus pour bien fonctionner (fallback si API indisponible)
+PREFERRED_FREE_MODELS = [
+    "google/gemini-2.0-flash",                     # 🆓 Gemini Flash
+    "google/gemini-2.0-flash-lite",                # 🆓 Gemini Lite
+    "meta-llama/llama-3.3-70b-instruct",           # 🆓 Llama 3.3 70B
+    "mistralai/mistral-small-24b-instruct-2501",   # 🆓 Mistral Small
+    "deepseek/deepseek-chat",                      # 💰 DeepSeek V3
+    "qwen/qwen-2.5-72b-instruct",                  # 💰 Qwen 2.5
+    "microsoft/phi-4-mini-instruct",               # 🆓 Phi-4 Mini
+    "qwen/qwen-2.5-coder-32b-instruct",            # 💰 Qwen Coder
 ]
 
-# 💎 PAID_MODEL_CHAIN : Modèles payants (dernier recours)
+# Modèles payants (dernier recours)
 PAID_MODEL_CHAIN = [
-    "anthropic/claude-sonnet-4",    # 💎 Claude - seulement si nécessaire
-    "openai/gpt-4o",               # 💎 GPT-4o - seulement si nécessaire
+    "anthropic/claude-sonnet-4",   # 💎 Claude Sonnet 4
+    "openai/gpt-4o",              # 💎 GPT-4o
 ]
 
-# SMART_MODEL_CHAIN : Chaîne de fallback par provider
-# Chaque provider a sa propre liste de modèles du + gratuit/rapide au + payant/puissant
+# Cache global des modèles disponibles
+_dynamic_models = None  # Liste des modèles gratuits/low-cost disponibles
+_dynamic_models_init = False
+
+async def refresh_dynamic_models():
+    """
+    Interroge l'API OpenRouter pour détecter dynamiquement 
+    les modèles gratuits disponibles.
+    Ne garde QUE ceux qui marchent vraiment.
+    """
+    global _dynamic_models, _dynamic_models_init
+    
+    api_key = os.getenv("OPENROUTER_API_KEY", "") or load_api_keys().get("OPENROUTER_API_KEY", "")
+    
+    if not api_key:
+        print("[FREE-FIRST] Pas de clé OpenRouter → fallback modèles préférés")
+        _dynamic_models = list(PREFERRED_FREE_MODELS) + list(PAID_MODEL_CHAIN)
+        _dynamic_models_init = True
+        return
+    
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(
+                "https://openrouter.ai/api/v1/models?sort=pricing-low-to-high",
+                headers={"Authorization": f"Bearer {api_key}"}
+            )
+            if r.status_code != 200:
+                print(f"[FREE-FIRST] API OpenRouter: {r.status_code} → fallback")
+                _dynamic_models = list(PREFERRED_FREE_MODELS) + list(PAID_MODEL_CHAIN)
+                _dynamic_models_init = True
+                return
+            
+            data = r.json()
+            all_models = data.get("data", [])
+            
+            # Analyser les prix de chaque modèle
+            api_model_map = {}  # id -> pricing info
+            for m in all_models:
+                mid = m["id"]
+                p = m.get("pricing", {})
+                try:
+                    pp = float(p.get("prompt", "1"))
+                    cp = float(p.get("completion", "1"))
+                except (ValueError, TypeError):
+                    continue
+                api_model_map[mid] = {"prompt": pp, "completion": cp}
+            
+            # 1️⃣ Filtrer les modèles préférés qui sont disponibles
+            available_preferred = [m for m in PREFERRED_FREE_MODELS if m in api_model_map]
+            
+            # 2️⃣ Détecter les modèles vraiment gratuits (pricing = 0)
+            free_detected = []
+            for mid, pricing in api_model_map.items():
+                if pricing["prompt"] == 0 and pricing["completion"] == 0:
+                    # Exclure les modèles vision/spécialisés
+                    if any(x in mid for x in ["/vision", "/vl", "/clip-", "content-safety"]):
+                        continue
+                    if mid not in available_preferred:
+                        free_detected.append(mid)
+            
+            # 3️⃣ Détecter les modèles low-cost (< 0.00005/token ≈ quasi gratuit)
+            cheap_detected = []
+            for mid, pricing in api_model_map.items():
+                if pricing["prompt"] == 0 and pricing["completion"] == 0:
+                    continue  # déjà dans free_detected
+                if pricing["prompt"] < 0.00005 and pricing["completion"] < 0.00005:
+                    if any(x in mid for x in ["/vision", "/vl", "/clip-"]):
+                        continue
+                    if mid not in available_preferred and mid not in free_detected:
+                        cheap_detected.append(mid)
+            
+            # 4️⃣ Assembler la chaîne finale : préférés → gratuits détectés → low-cost → payants
+            _dynamic_models = (
+                available_preferred +
+                free_detected[:10] +       # max 10 gratuits détectés
+                cheap_detected[:5] +       # max 5 low-cost
+                list(PAID_MODEL_CHAIN)      # payants en dernier recours
+            )
+            
+            _dynamic_models_init = True
+            print(f"[FREE-FIRST] ✅ {len(available_preferred)} préférés + {len(free_detected[:10])} gratuits "
+                  f"+ {len(cheap_detected[:5])} low-cost = {len(_dynamic_models)} modèles disponibles")
+            
+    except Exception as e:
+        print(f"[FREE-FIRST] ❌ Erreur API: {e} → fallback modèles préférés")
+        _dynamic_models = list(PREFERRED_FREE_MODELS) + list(PAID_MODEL_CHAIN)
+        _dynamic_models_init = True
+
+
+def get_active_models() -> list[str]:
+    """Retourne la liste des modèles dynamiques ou le fallback."""
+    if _dynamic_models:
+        return list(_dynamic_models)
+    return list(PREFERRED_FREE_MODELS) + list(PAID_MODEL_CHAIN)
+
+
+# SMART_MODEL_CHAIN : Chaîne par provider
+# - openrouter utilise les modèles dynamiques
+# - les autres providers ont leurs chaînes statiques
 SMART_MODEL_CHAIN = {
-    "openrouter": FREE_MODEL_CHAIN + PAID_MODEL_CHAIN,
+    "openrouter": None,  # Sera peuplé par refresh_dynamic_models()
     "omniroute": [
-        # ⚠️ OmniRoute nécessite un serveur local - indisponible sur Render
         "auto/best-free",
         "auto/coding:free",
         "auto/smart",
     ],
     "deepseek": [
-        "deepseek-chat",              # 🧠 DeepSeek - excellent code, quasi gratuit
+        "deepseek-chat",
         "deepseek-reasoner",
     ],
 }
-
-# FREE_FALLBACK : Modèle de dernier recours si tout échoue
-DEFAULT_FALLBACK = "google/gemini-2.0-flash"
 
 
 # ============================================
@@ -206,7 +289,7 @@ class ChatRequest(BaseModel):
     max_tokens: int = 4096
     system_prompt: str = "Tu es Akyel AI, un assistant de codage stratégique orchestré par un routage intelligent. Tu utilises automatiquement le meilleur modèle disponible pour chaque tâche (code, raisonnement, créativité). Tu aides les utilisateurs à coder avec des explications claires et précises. Tu réponds en français."
     smart_mode: bool = False
-    files: list[dict] = []  # Fichiers attachés: [{id, name, type, content?, path?}]
+    files: list[dict] = []
 
 class SaveKeysRequest(BaseModel):
     keys: dict[str, str]
@@ -254,7 +337,8 @@ class ProjectFileSave(BaseModel):
 @app.on_event("startup")
 async def startup():
     await init_database()
-    # Demarrage automatique d'OmniRoute si c'est le provider par defaut
+    # Détection dynamique des modèles gratuits OpenRouter
+    asyncio.create_task(refresh_dynamic_models())
     if config.default_provider == "omniroute":
         asyncio.create_task(ensure_omniroute())
 
@@ -270,7 +354,6 @@ async def index():
 # ========== PROVIDERS ==========
 @app.get("/api/config")
 async def app_config():
-    """Return app configuration."""
     return {
         "default_provider": config.default_provider,
         "app_name": "Akyel AI",
@@ -291,6 +374,17 @@ async def list_models():
             providers[name]["api_key_env"] = p.api_key_env
             providers[name]["requires_key"] = p.requires_key
     return {"providers": providers}
+
+
+@app.get("/api/free-models")
+async def free_models():
+    """Endpoint dédié pour voir les modèles gratuits détectés."""
+    return {
+        "dynamic_models_loaded": _dynamic_models_init,
+        "total_models": len(get_active_models()),
+        "models": get_active_models(),
+        "preferred_fallback": not _dynamic_models_init,
+    }
 
 
 # ========== CHAT ==========
@@ -318,7 +412,6 @@ async def chat(request: ChatRequest):
     conv_id = request.conversation_id or str(uuid.uuid4())
     db = await Database.open()
     
-    # Setup DB : créer/charger conversation, message utilisateur
     try:
         cursor = await db.execute("SELECT id FROM conversations WHERE id = ?", (conv_id,))
         existing = await cursor.fetchone()
@@ -335,14 +428,12 @@ async def chat(request: ChatRequest):
         rows = await cursor.fetchall()
         history = [{"role": row["role"], "content": row["content"]} for row in rows]
 
-        # Si des fichiers sont attachés, construire le message enrichi
         user_content = build_user_message(request.message, request.files) if request.files else request.message
         
         messages = [{"role": "system", "content": request.system_prompt}]
         messages.extend(history[-config.max_history:])
         messages.append({"role": "user", "content": user_content})
         
-        # Sauvegarder le message original (sans le contenu des fichiers pour la lisibilité)
         display_content = request.message
         if request.files:
             file_names = [f.get("name", "fichier") for f in request.files]
@@ -366,39 +457,50 @@ async def chat(request: ChatRequest):
         await db.close()
         raise
     
-    # ===== FREE-FIRST ROUTING : cascade gratuite puis payante =====
+    # ===== FREE-FIRST ROUTING : cascade dynamique =====
     models_to_try = []
-    # Si le provider a une chaîne SMART_MODEL_CHAIN, on l'utilise
-    # (cela active le free-first routing pour openrouter + tous les autres)
-    chain = SMART_MODEL_CHAIN.get(provider_name, None)
-    if chain:
-        models_to_try = list(chain)
-        # Si l'utilisateur a demandé un modèle spécifique, le mettre en premier
-        if request.model and request.model not in models_to_try:
-            models_to_try.insert(0, request.model)
-        # Si smart_mode est activé, ajouter les modèles payants à la fin
-        if request.smart_mode:
-            for m in PAID_MODEL_CHAIN:
-                if m not in models_to_try:
-                    models_to_try.append(m)
-        # Message informatif sur le mode Free-First
-        free_count = sum(1 for m in models_to_try if 'free' in m or 'flash' in m.lower() or 'gemini' in m.lower())
-        print(f"[FREE-FIRST] {provider_name}: {len(models_to_try)} modeles, {free_count} gratuits en tete")
+    
+    # Pour openrouter : utiliser les modèles dynamiques détectés par l'API
+    if provider_name == "openrouter":
+        active = get_active_models()
+        models_to_try = list(active)
+        if _dynamic_models_init:
+            models_to_try.insert(0, "[INFO] Modèles détectés dynamiquement via OpenRouter API")
+        print(f"[FREE-FIRST] Utilisation de {len(active)} modèles détectés dynamiquement")
     else:
-        # Pas de chaîne définie pour ce provider → utiliser le modèle par défaut
-        models_to_try = [request.model or provider.config.default_model]
+        # Pour les autres providers : chaîne statique ou modèle par défaut
+        chain = SMART_MODEL_CHAIN.get(provider_name, None)
+        if chain:
+            models_to_try = list(chain)
+        else:
+            models_to_try = [request.model or provider.config.default_model]
+    
+    # Si l'utilisateur a demandé un modèle spécifique, le mettre en premier
+    if request.model and request.model not in models_to_try:
+        models_to_try.insert(0, request.model)
+    
+    # Si smart_mode, ajouter les payants en fin de chaîne
+    if request.smart_mode:
+        for m in PAID_MODEL_CHAIN:
+            if m not in models_to_try:
+                models_to_try.append(m)
     
     async def generate():
         last_error = None
         try:
             for model_idx, try_model in enumerate(models_to_try):
+                # Skip the info string if present
+                if try_model.startswith("[INFO]"):
+                    yield f"data: {json.dumps({'info': try_model[7:].strip(), 'conversation_id': conv_id})}\n\n"
+                    continue
+                    
                 try:
                     full_response = ""
                     model_used = try_model
                     
                     if len(models_to_try) > 1:
                         if model_idx == 0:
-                            yield f"data: {json.dumps({'info': f'⚡ Routage vers le meilleur modèle...', 'conversation_id': conv_id})}\n\n"
+                            yield f"data: {json.dumps({'info': f'⚡ Routage vers le meilleur modèle gratuit...', 'conversation_id': conv_id})}\n\n"
                         elif model_idx == 1:
                             yield f"data: {json.dumps({'info': f'🔄 Fallback vers modèle secondaire...', 'conversation_id': conv_id})}\n\n"
                         else:
@@ -411,13 +513,11 @@ async def chat(request: ChatRequest):
                         full_response += chunk
                         yield f"data: {json.dumps({'content': chunk, 'conversation_id': conv_id, 'model_used': model_used})}\n\n"
                     
-                    # Si réponse vide et qu'on a d'autres modèles à essayer, fallback
                     if not full_response.strip() and model_idx < len(models_to_try) - 1:
                         last_error = "Réponse vide"
                         yield f"data: {json.dumps({'info': f'⚠️ {try_model} a retourné une réponse vide... Passage au suivant'})}\n\n"
                         continue
                     
-                    # Succès ! Sauvegarder avec la connexion db
                     await db.execute(
                         "INSERT INTO messages (conversation_id, role, content, provider, model) VALUES (?, ?, ?, ?, ?)",
                         (conv_id, "assistant", full_response, provider_name, model_used)
@@ -548,14 +648,11 @@ async def save_api_keys_endpoint(request: SaveKeysRequest):
 
 # ========== SKILLS ==========
 
-# Cloner un repo GitHub en skill (helper)
 async def _clone_and_install(repo_url: str, db) -> dict | str:
-    """Clone a repo and return skill info or error message."""
     repo_full = get_repo_full_name(repo_url)
     author = get_repo_author(repo_url)
     skill_name = repo_full.split("/")[-1] if "/" in repo_full else repo_full
     
-    # Check if already installed
     cursor = await db.execute("SELECT id FROM skills WHERE repo_url = ? OR name = ?", (repo_url, skill_name))
     existing = await cursor.fetchone()
     if existing:
@@ -589,7 +686,6 @@ async def _clone_and_install(repo_url: str, db) -> dict | str:
 
 @app.post("/api/skills/install-trending")
 async def install_trending():
-    """Install all trending AI repos as skills."""
     db = await Database.open()
     results = {"success": [], "skipped": [], "errors": []}
     try:
@@ -608,7 +704,6 @@ async def install_trending():
 
 @app.post("/api/skills/install-multiple")
 async def install_multiple(request: Request):
-    """Install multiple repos from a list of URLs."""
     data = await request.json()
     urls = data.get("urls", [])
     if not urls:
@@ -630,9 +725,10 @@ async def install_multiple(request: Request):
     finally:
         await db.close()
     return results
+
+
 @app.get("/api/skills")
 async def list_skills():
-    """List all installed skills."""
     db = await Database.open()
     try:
         cursor = await db.execute(
@@ -640,7 +736,6 @@ async def list_skills():
             "FROM skills ORDER BY installed_at DESC"
         )
         skills = [dict(r) for r in await cursor.fetchall()]
-        # Check which repos still exist on disk
         for s in skills:
             repo_path = Path(s["skill_path"])
             s["on_disk"] = repo_path.exists()
@@ -652,12 +747,10 @@ async def list_skills():
 
 @app.post("/api/skills/install")
 async def install_skill(request: InstallSkillRequest):
-    """Install a skill from a GitHub repo."""
     repo_url = request.repo_url.strip()
     if not repo_url:
         raise HTTPException(status_code=400, detail="URL du repo requis")
 
-    # Validate URL
     if not repo_url.startswith(("https://github.com/", "http://github.com/", "git@github.com:")):
         raise HTTPException(status_code=400, detail="Seules les URLs GitHub sont supportées")
 
@@ -665,7 +758,6 @@ async def install_skill(request: InstallSkillRequest):
     author = get_repo_author(repo_url)
     skill_name = repo_full.split("/")[-1] if "/" in repo_full else repo_full
 
-    # Check if already installed
     db = await Database.open()
     try:
         cursor = await db.execute("SELECT id FROM skills WHERE repo_url = ? OR name = ?", (repo_url, skill_name))
@@ -673,7 +765,6 @@ async def install_skill(request: InstallSkillRequest):
         if existing:
             raise HTTPException(status_code=400, detail=f"Le skill '{skill_name}' est déjà installé")
 
-        # Clone the repo
         repo_path = SKILLS_DIR / skill_name
         if repo_path.exists():
             shutil.rmtree(repo_path)
@@ -690,10 +781,8 @@ async def install_skill(request: InstallSkillRequest):
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=400, detail="Timeout: le clone a pris trop de temps")
 
-        # Extract description
         description = extract_readme_text(repo_path)
 
-        # Find skill files
         skill_files = []
         for f in repo_path.rglob("*"):
             if f.is_file() and f.suffix in [".md", ".yaml", ".yml", ".json", ".txt", ".py", ".js", ".sh"]:
@@ -722,14 +811,11 @@ async def install_skill(request: InstallSkillRequest):
 
 @app.post("/api/skills/scan")
 async def scan_skills():
-    """Scan local skills directory and sync with database."""
     db = await Database.open()
     try:
-        # Get existing skills
         cursor = await db.execute("SELECT id, name, skill_path FROM skills")
         existing = {row["name"]: dict(row) for row in await cursor.fetchall()}
 
-        # Scan disk
         if not SKILLS_DIR.exists():
             return {"skills": [], "removed": [], "added": []}
 
@@ -739,21 +825,13 @@ async def scan_skills():
                 name = item.name
                 on_disk.add(name)
                 if name not in existing:
-                    # New skill found on disk, add to DB
                     desc = extract_readme_text(item)
                     author = ""
-                    readme = item / "README.md"
-                    if readme.exists():
-                        for line in readme.read_text().split("\n"):
-                            if line.startswith("#") and " " in line:
-                                name_in_readme = line.replace("#", "").strip()
-                                break
                     await db.execute(
                         "INSERT INTO skills (name, repo_url, description, author, skill_path) VALUES (?, ?, ?, ?, ?)",
                         (name, f"https://github.com/local/{name}", desc, author, str(item))
                     )
 
-        # Mark removed skills
         removed = []
         for name, skill in existing.items():
             if name not in on_disk:
@@ -773,7 +851,6 @@ async def scan_skills():
 
 @app.delete("/api/skills/{skill_id}")
 async def delete_skill(skill_id: int):
-    """Delete a skill."""
     db = await Database.open()
     try:
         cursor = await db.execute("SELECT id, skill_path FROM skills WHERE id = ?", (skill_id,))
@@ -781,7 +858,6 @@ async def delete_skill(skill_id: int):
         if not skill:
             raise HTTPException(status_code=404, detail="Skill introuvable")
 
-        # Remove from disk
         repo_path = Path(skill["skill_path"])
         if repo_path.exists():
             shutil.rmtree(repo_path)
@@ -795,7 +871,6 @@ async def delete_skill(skill_id: int):
 
 @app.put("/api/skills/{skill_id}/toggle")
 async def toggle_skill(skill_id: int):
-    """Toggle a skill's enabled status."""
     db = await Database.open()
     try:
         cursor = await db.execute("SELECT id, enabled, name FROM skills WHERE id = ?", (skill_id,))
@@ -813,7 +888,6 @@ async def toggle_skill(skill_id: int):
 
 @app.get("/api/skills/{skill_id}/explore")
 async def explore_skill(skill_id: int):
-    """Explore a skill's files and content."""
     db = await Database.open()
     try:
         cursor = await db.execute("SELECT name, skill_path, description FROM skills WHERE id = ?", (skill_id,))
@@ -830,7 +904,6 @@ async def explore_skill(skill_id: int):
             if f.is_file() and f.name not in [".gitkeep"]:
                 rel = str(f.relative_to(repo_path))
                 size = f.stat().st_size
-                # Read first 500 chars of text files
                 preview = ""
                 if f.suffix in [".md", ".txt", ".py", ".js", ".yaml", ".yml", ".json", ".sh", ".toml", ".cfg", ".ini"]:
                     try:
@@ -845,7 +918,6 @@ async def explore_skill(skill_id: int):
 
 
 # ========== MARKETPLACE ==========
-# Liste des meilleurs repos AI/ML tendances à installer en masse
 TRENDING_AI_REPOS = [
     "https://github.com/unclecode/crawl4ai",
     "https://github.com/trekhleb/javascript-algorithms",
@@ -934,8 +1006,6 @@ FEATURED_REPOS = [
 
 @app.get("/api/marketplace/featured")
 async def marketplace_featured():
-    """Get featured/popular repositories."""
-    # Check installed skills to mark them
     db = await Database.open()
     try:
         cursor = await db.execute("SELECT repo_full_name, name FROM skills")
@@ -957,7 +1027,6 @@ async def marketplace_featured():
 
 @app.get("/api/marketplace/search")
 async def marketplace_search(q: str = ""):
-    """Search GitHub for repositories."""
     if not q or len(q.strip()) < 2:
         return {"repos": [], "error": "Requete trop courte (min 2 caracteres)"}
 
@@ -977,7 +1046,6 @@ async def marketplace_search(q: str = ""):
             data = r.json()
             items = data.get("items", [])[:15]
 
-            # Check which are already installed
             db = await Database.open()
             try:
                 cursor = await db.execute("SELECT repo_full_name FROM skills")
@@ -1009,7 +1077,6 @@ async def marketplace_search(q: str = ""):
 
 @app.get("/api/marketplace/trending")
 async def marketplace_trending():
-    """Get trending Python/AI repositories from GitHub."""
     url = "https://api.github.com/search/repositories"
     params = {"q": "stars:>1000 pushed:>2025-01-01", "sort": "stars", "order": "desc", "per_page": 10}
     headers = {"Accept": "application/vnd.github.v3+json", "User-Agent": "AkyelIA/2.0"}
@@ -1055,7 +1122,6 @@ async def marketplace_trending():
 # ============================================
 @app.post("/api/web-search")
 async def web_search_endpoint(request: Request):
-    """Search the web and return results."""
     data = await request.json()
     query = data.get("query", "").strip()
     if not query or len(query) < 3:
@@ -1340,12 +1406,10 @@ async def get_project_file(project_id: str, file_id: int):
 async def create_project_file(project_id: str, request: ProjectFileSave):
     db = await Database.open()
     try:
-        # Check project exists
         cursor = await db.execute("SELECT id FROM projects WHERE id = ?", (project_id,))
         if not await cursor.fetchone():
             raise HTTPException(status_code=404, detail="Projet introuvable")
         
-        # Check for duplicate path
         cursor = await db.execute(
             "SELECT id FROM project_files WHERE project_id = ? AND path = ?", (project_id, request.path)
         )
@@ -1410,14 +1474,13 @@ async def delete_project_file(project_id: str, file_id: int):
 # ============================================
 @app.get("/api/system")
 async def system_info():
-    """Get system information."""
     import sys
     return {
         "python": sys.version.split()[0],
         "platform": sys.platform,
         "app_version": "2.1.0",
         "app_name": "Akyel AI",
-        "uptime": "",  # À améliorer si besoin
+        "uptime": "",
         "total_providers": len(config.providers),
     }
 
@@ -1427,7 +1490,6 @@ async def system_info():
 # ============================================
 
 def get_file_type(filename: str) -> str:
-    """Determine file type from extension."""
     ext = Path(filename).suffix.lower()
     if ext in IMAGE_EXTENSIONS:
         return "image"
@@ -1439,7 +1501,6 @@ def get_file_type(filename: str) -> str:
 
 
 def read_text_file_content(filepath: Path, max_size: int = 50000) -> str:
-    """Read a text file safely."""
     if not filepath.exists() or not filepath.is_file():
         return ""
     if filepath.stat().st_size > max_size:
@@ -1455,7 +1516,6 @@ def read_text_file_content(filepath: Path, max_size: int = 50000) -> str:
 
 @app.post("/api/upload")
 async def upload_files(files: list[UploadFile] = File(...)):
-    """Upload files to the server."""
     if not files:
         raise HTTPException(status_code=400, detail="Aucun fichier fourni")
     if len(files) > 10:
@@ -1470,7 +1530,7 @@ async def upload_files(files: list[UploadFile] = File(...)):
         filepath = UPLOADS_DIR / safe_name
         
         content = await file.read()
-        if len(content) > 10 * 1024 * 1024:  # 10 MB max
+        if len(content) > 10 * 1024 * 1024:
             continue
         
         filepath.write_bytes(content)
@@ -1485,11 +1545,9 @@ async def upload_files(files: list[UploadFile] = File(...)):
             "url": f"/api/files/{file_id}{ext}",
         }
         
-        # Pour les fichiers texte, lire le contenu directement
         if file_type in ("text", "code"):
             file_info["content"] = read_text_file_content(filepath)
         elif file_type == "image":
-            # Convertir en base64 pour prévisualisation
             mime = mimetypes.guess_type(original_name)[0] or "image/png"
             b64 = base64.b64encode(content).decode()
             file_info["preview_url"] = f"data:{mime};base64,{b64}"
@@ -1501,8 +1559,6 @@ async def upload_files(files: list[UploadFile] = File(...)):
 
 @app.get("/api/files/{file_id:str}")
 async def serve_file(file_id: str):
-    """Serve an uploaded file."""
-    # Find file by ID (any extension)
     for f in UPLOADS_DIR.iterdir():
         if f.is_file() and f.stem == file_id:
             return FileResponse(str(f))
@@ -1511,7 +1567,6 @@ async def serve_file(file_id: str):
 
 @app.post("/api/files/read-local")
 async def read_local_file(request: Request):
-    """Read a file from a local path (sécurisé)."""
     data = await request.json()
     filepath = data.get("path", "").strip()
     if not filepath:
@@ -1519,14 +1574,13 @@ async def read_local_file(request: Request):
     
     path = Path(filepath).resolve()
     
-    # Sécurité: vérifier que le fichier existe et est accessible
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Fichier introuvable: {filepath}")
     if not path.is_file():
         raise HTTPException(status_code=400, detail="Le chemin spécifié n'est pas un fichier")
     
     file_type = get_file_type(path.name)
-    max_size = 100000  # 100 KB
+    max_size = 100000
     
     if file_type == "image":
         content_bytes = path.read_bytes()
@@ -1558,9 +1612,7 @@ async def read_local_file(request: Request):
 
 
 # ========== Modification du chat pour gérer les fichiers ==========
-# Cette fonction prépare le message utilisateur avec les fichiers attachés
 def build_user_message(message: str, files: list[dict]) -> str:
-    """Build user message content including file contents."""
     if not files:
         return message
     
@@ -1576,24 +1628,15 @@ def build_user_message(message: str, files: list[dict]) -> str:
         elif ftype == "code":
             ext = Path(name).suffix.lstrip(".") or ""
             if content:
-                parts.append(f"\n--- Début du fichier: {name} ---\n```{ext}\n{content}\n```\n--- Fin de {name} ---")
+                parts.append(f"\n--- Début du fichier: {name} ---\n```{ext}\n{content}\n```")
             else:
-                parts.append(f"\n[ Fichier: {name} (non lisible) ]")
+                parts.append(f"\n[ Fichier: {name} ]")
         elif ftype == "text":
             if content:
-                parts.append(f"\n--- Contenu de {name} ---\n{content}\n--- Fin de {name} ---")
+                parts.append(f"\n--- Debut du fichier: {name} ---\n{content}\n--- Fin du fichier: {name} ---")
             else:
                 parts.append(f"\n[ Fichier: {name} ]")
         else:
-            parts.append(f"\n[ Fichier joint: {name} ]")
+            parts.append(f"\n[ Fichier: {name} ({ftype}) ]")
     
     return "\n".join(parts)
-
-
-if __name__ == "__main__":
-    import uvicorn
-    print(f"[OK] AkyelIA demarre sur http://{config.host}:{config.port}")
-    print(f"[INFO] Providers disponibles : {', '.join(config.providers.keys())}")
-    print(f"[INFO] Base de donnees : {config.db_path}")
-    print(f"[INFO] Uploads: {UPLOADS_DIR}")
-    uvicorn.run(app, host=config.host, port=config.port)
