@@ -212,12 +212,15 @@ class Config:
             base_url="https://openrouter.ai/api/v1",
             default_model="google/gemini-2.0-flash",  # 🆓 Gratuit sur OpenRouter
             models=["google/gemini-2.0-flash",                    # 🆓 Gemini - toujours gratuit
+                    "google/gemini-2.0-flash-lite",               # 🆓 Gemini Lite - ultra léger
                     "meta-llama/llama-3.3-70b-instruct",         # 🆓 Llama - toujours gratuit
                     "mistralai/mistral-small-24b-instruct-2501",  # 🆓 Mistral - toujours gratuit
-                    "deepseek/deepseek-chat",                     # 🆓 DeepSeek - quasi gratuit
-                    "anthropic/claude-sonnet-4",
-                    "openai/gpt-4o",
-                    "qwen/qwen-2.5-72b-instruct"],
+                    "deepseek/deepseek-chat",                     # 💰 DeepSeek - quasi gratuit
+                    "qwen/qwen-2.5-72b-instruct",                 # 💰 Qwen - bon rapport qualité/prix
+                    "microsoft/phi-4-mini-instruct",              # 🆓 Phi-4 - gratuit
+                    "qwen/qwen-2.5-coder-32b-instruct",           # 💰 Qwen Coder - code pas cher
+                    "anthropic/claude-sonnet-4",                  # 💎 Payant - dernier recours
+                    "openai/gpt-4o"],
             api_type="openai", icon="🌐",
             description="200+ modeles. Une seule clé pour tous les accès",
             setup_url="https://openrouter.ai/keys"

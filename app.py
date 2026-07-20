@@ -147,65 +147,51 @@ async def ensure_omniroute():
 
 
 # ============================================
-# SMART ROUTING - Fallback chain des meilleurs modèles
+# FREE-FIRST ROUTING - Cascade multi-providers 100% gratuite
 # ============================================
+# Stratégie : essayer les modèles gratuits d'abord, les quasi-gratuits ensuite,
+# et les payants en TOUT dernier recours. Les tokens sont précieux !
+
+# 🆓 FREE_MODEL_CHAIN : Modèles open-source/rate-limités connus pour être gratuits
+# Ces modèles sont accessibles via OpenRouter sans carte bancaire
+FREE_MODEL_CHAIN = [
+    # 🥇 TIER 1 - Gratuits 100% (même sans crédit OpenRouter)
+    "google/gemini-2.0-flash",                    # 🆓 Gemini Flash - rapide, polyvalent
+    "google/gemini-2.0-flash-lite",               # 🆓 Gemini Flash Lite - ultra léger
+    "meta-llama/llama-3.3-70b-instruct",          # 🆓 Llama 3.3 70B - excellent raisonnement
+    "mistralai/mistral-small-24b-instruct-2501",   # 🆓 Mistral Small - nouveau gratuit
+    # 🥈 TIER 2 - Quasi gratuits (quelques centimes pour 1M tokens)
+    "deepseek/deepseek-chat",                      # 💰 DeepSeek V3 - $0.014/M tokens (quasi rien)
+    "qwen/qwen-2.5-72b-instruct",                  # 💰 Qwen 2.5 - excellent rapport qualité/prix
+    # 🥉 TIER 3 - Fallback gratuits supplémentaires
+    "microsoft/phi-4-mini-instruct",
+    "qwen/qwen-2.5-coder-32b-instruct",
+]
+
+# 💎 PAID_MODEL_CHAIN : Modèles payants (dernier recours)
+PAID_MODEL_CHAIN = [
+    "anthropic/claude-sonnet-4",    # 💎 Claude - seulement si nécessaire
+    "openai/gpt-4o",               # 💎 GPT-4o - seulement si nécessaire
+]
+
+# SMART_MODEL_CHAIN : Chaîne de fallback par provider
+# Chaque provider a sa propre liste de modèles du + gratuit/rapide au + payant/puissant
 SMART_MODEL_CHAIN = {
+    "openrouter": FREE_MODEL_CHAIN + PAID_MODEL_CHAIN,
     "omniroute": [
-        # 🎭 CLAUDE - Chef d'orchestre (modèle principal N°1)
-        "tllm/CLAUDE_4_6_OPUS",        # 🥇 Claude Opus 4.6 - LE + PUISSANT (raisonnement, code, tout)
-        "tllm/CLAUDE_4_6_SONNET",      # 🥇 Claude Sonnet 4.6 - Top code & vitesse
-        "aug/claude-opus-4.6",          # 🥇 Claude Opus 4.6 (Alt) - Backup
-        "aug/claude-sonnet-4.6",        # 🥇 Claude Sonnet 4.6 (Alt) - Backup
-        # 🥈 TOP MODÈLES PROPRIÉTAIRES
-        "tllm/GPT_5",                  # 🥈 GPT-5 - Généraliste ultra-puissant
-        "tllm/GPT_5_4",                # GPT-5.4 - Réflexion approfondie
-        "tllm/gemini_3_pro",           # 🥈 Gemini 3 Pro - Multimodal géant
-        "tllm/gemini_2_5_pro",         # Gemini 2.5 Pro - Raisonnement
-        "tllm/deepseek_v4",            # DeepSeek V4 - Code expert
-        # 🥉 MEILLEURS OPEN-SOURCE
-        "oc/minimax-m3-free",          # 🥉 MiniMax M3 - Top open-weight
-        "oc/deepseek-v4-flash-free",   # DeepSeek V4 Flash - Ultra-rapide
-        "oc/qwen3.6-plus-free",        # Qwen 3.6 Plus - Grand contexte
-        "oc/nemotron-3-super-free",    # Nemotron 3 Super - Open-weight
-        # 4️⃣ MODÈLES LÉGERS & SPÉCIALISÉS
-        "tllm/CLAUDE_4_5_HAIKU",       # Claude Haiku - Ultra-rapide
-        "tllm/GPT_o4_mini",            # GPT o4 mini - Petit mais costaud
-        "tllm/gemini_2_0_flash",       # Gemini Flash - Léger & gratuit
-        "tllm/gemini_3_flash",         # Gemini 3 Flash - Nouveau flash
-        "aug/claude-haiku-4.5",        # Claude Haiku (Alt)
-        "aug/gpt-5.5-high",            # GPT-5.5 High
-        "aug/gpt-5.5-medium",          # GPT-5.5 Medium
-        # 5️⃣ ROUTAGE INTELLIGENT (fallback auto)
-        "auto/smart",                  # Routage intelligent OmniRoute
-        "auto/pro-coding",             # Pro coding routing
-        "auto/pro-reasoning",          # Pro reasoning routing
-        "auto/best-free",              # Meilleur gratuit dispo
-        "auto/coding:free",            # Meilleur code gratuit
-        "auto/best-chat",              # Meilleur chat
-        "auto/best-fast",              # Le plus rapide
+        # ⚠️ OmniRoute nécessite un serveur local - indisponible sur Render
+        "auto/best-free",
+        "auto/coding:free",
+        "auto/smart",
     ],
-    "openrouter": [
-        # 🎯 CHAÎNE DE ROUTAGE OPENROUTER - Modèles gratuits d'abord
-        "google/gemini-2.0-flash",                    # 🆓 N°1 Gemini 2.0 Flash - Gratuit, rapide, puissant
-        "meta-llama/llama-3.3-70b-instruct",          # 🆓 N°2 Llama 3.3 70B - Excellent raisonnement
-        "mistralai/mistral-small-24b-instruct-2501",   # 🆓 N°3 Mistral Small 24B - Nouveau, performant
-        "deepseek/deepseek-chat",                      # 🆓 N°4 DeepSeek - Top code
-        "qwen/qwen-2.5-72b-instruct",                  # 🆓 N°5 Qwen 2.5 72B - Grand contexte
-        # Modèles payants (fallback si l'utilisateur a des credits)
-        "anthropic/claude-sonnet-4",
-        "openai/gpt-4o",
-    ],
-    "nvidia": [
-        "meta/llama-3.3-70b-instruct",      # 🥇 Meilleur NVIDIA
-        "nvidia/llama-3.3-nemotron-super-49b-v1", # 🥈 Nemotron
-        "deepseek-ai/deepseek-v4-flash",     # 🥉 DeepSeek sur NVIDIA
-        "mistralai/mixtral-8x22b-instruct",  # 4️⃣ Mixtral
-        "qwen/qwq-32b",                      # 5️⃣ QwQ raisonnement
-        "microsoft/phi-4-mini-instruct",     # 6️⃣ Phi-4 léger
+    "deepseek": [
+        "deepseek-chat",              # 🧠 DeepSeek - excellent code, quasi gratuit
+        "deepseek-reasoner",
     ],
 }
 
-DEFAULT_FALLBACK = "auto/best-free"
+# FREE_FALLBACK : Modèle de dernier recours si tout échoue
+DEFAULT_FALLBACK = "google/gemini-2.0-flash"
 
 
 # ============================================
@@ -380,17 +366,26 @@ async def chat(request: ChatRequest):
         await db.close()
         raise
     
-    # ===== Smart Routing : fallback chain des meilleurs modèles =====
+    # ===== FREE-FIRST ROUTING : cascade gratuite puis payante =====
     models_to_try = []
-    if request.smart_mode or provider_name == "omniroute":
-        chain = SMART_MODEL_CHAIN.get(provider_name, None)
-        if chain:
-            models_to_try = chain
-            if request.model and request.model not in models_to_try:
-                models_to_try.insert(0, request.model)
-        else:
-            models_to_try = [request.model or provider.config.default_model]
+    # Si le provider a une chaîne SMART_MODEL_CHAIN, on l'utilise
+    # (cela active le free-first routing pour openrouter + tous les autres)
+    chain = SMART_MODEL_CHAIN.get(provider_name, None)
+    if chain:
+        models_to_try = list(chain)
+        # Si l'utilisateur a demandé un modèle spécifique, le mettre en premier
+        if request.model and request.model not in models_to_try:
+            models_to_try.insert(0, request.model)
+        # Si smart_mode est activé, ajouter les modèles payants à la fin
+        if request.smart_mode:
+            for m in PAID_MODEL_CHAIN:
+                if m not in models_to_try:
+                    models_to_try.append(m)
+        # Message informatif sur le mode Free-First
+        free_count = sum(1 for m in models_to_try if 'free' in m or 'flash' in m.lower() or 'gemini' in m.lower())
+        print(f"[FREE-FIRST] {provider_name}: {len(models_to_try)} modeles, {free_count} gratuits en tete")
     else:
+        # Pas de chaîne définie pour ce provider → utiliser le modèle par défaut
         models_to_try = [request.model or provider.config.default_model]
     
     async def generate():
