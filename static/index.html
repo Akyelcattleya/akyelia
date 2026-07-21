@@ -2274,6 +2274,80 @@ body{font-family:var(--font-sans);background:var(--bg);color:var(--text);min-hei
 
 
 
+
+
+/* ═══════════════════════════════════════════════
+   ENHANCED POLISH
+   ═══════════════════════════════════════════════ */
+
+/* Animated gradient border for login gate */
+#loginGate > div {
+  animation: fadeInScale 0.5s ease-out !important;
+  position: relative;
+  box-shadow: 0 0 40px rgba(124,58,237,0.15), 0 20px 60px rgba(0,0,0,0.4) !important;
+}
+#loginGate > div::before {
+  content: '';
+  position: absolute;
+  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  border-radius: 25px;
+  background: linear-gradient(135deg, #7c3aed, #06b6d4, #7c3aed, #a855f7);
+  background-size: 300% 300%;
+  z-index: -1;
+  animation: gradientMove 4s ease infinite;
+  opacity: 0.8;
+}
+
+/* Chat input focus glow */
+#ta:focus {
+  box-shadow: 0 0 20px rgba(124,58,237,0.08) !important;
+}
+
+/* Super Agent Dashboard styles */
+.sa-dashboard { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 2000; background: rgba(7,5,26,0.85); backdrop-filter: blur(16px); display: none; align-items: center; justify-content: center; }
+.sa-dashboard.active { display: flex; }
+.sa-panel { width: 92%; max-width: 900px; max-height: 88vh; background: var(--glass); backdrop-filter: blur(40px); border: 1px solid var(--glass-border); border-radius: var(--radius-2xl); overflow: hidden; animation: scaleIn 0.25s ease; box-shadow: 0 32px 96px rgba(0,0,0,0.45); }
+.sa-header { padding: 18px 24px; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; }
+.sa-header h2 { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.sa-header .sa-status { font-size: 12px; padding: 4px 14px; border-radius: 10px; }
+.sa-header .sa-status.running { background: rgba(34,197,94,0.06); color: var(--success); border: 1px solid rgba(34,197,94,0.08); }
+.sa-body { padding: 24px; overflow-y: auto; max-height: calc(88vh - 140px); }
+.sa-phase { padding: 14px 18px; border-radius: var(--radius-md); border: 1px solid var(--glass-border); margin-bottom: 10px; background: var(--glass); }
+.sa-phase.active { border-color: var(--a1); box-shadow: 0 0 20px rgba(124,58,237,0.04); }
+.sa-phase.done { border-color: rgba(34,197,94,0.15); }
+.sa-phase .sa-phase-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.sa-phase .sa-phase-name { font-weight: 600; font-size: 14px; }
+.sa-phase .sa-phase-status { font-size: 11px; padding: 2px 10px; border-radius: 8px; }
+.sa-phase .sa-phase-status.pending { background: rgba(107,114,128,0.06); color: #6b7280; }
+.sa-phase .sa-phase-status.working { background: rgba(124,58,237,0.06); color: var(--a1); }
+.sa-phase .sa-phase-status.done { background: rgba(34,197,94,0.06); color: var(--success); }
+.sa-phase .sa-phase-content { font-size: 13px; color: var(--text2); line-height: 1.6; margin-top: 8px; }
+.sa-progress { height: 4px; background: var(--border); border-radius: 2px; margin: 16px 0; overflow: hidden; }
+.sa-progress-bar { height: 100%; background: var(--g3); background-size: 200% 200%; animation: gradientMove 2s ease infinite; border-radius: 2px; transition: width 0.5s ease; }
+
+@keyframes saPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Skeleton loading */
+.skeleton{display:flex;gap:14px;margin-bottom:22px;animation:fadeIn .4s ease}
+.skeleton .sk-avatar{width:34px;height:34px;border-radius:12px;background:var(--text3);opacity:.15;flex-shrink:0;animation:skeletonPulse 1.8s ease-in-out infinite}
+.skeleton .sk-lines{flex:1;display:flex;flex-direction:column;gap:8px;padding-top:6px}
+.skeleton .sk-line{height:12px;border-radius:6px;background:var(--text3);opacity:.1;animation:skeletonPulse 1.8s ease-in-out infinite}
+.skeleton .sk-line:nth-child(2){width:75%}
+.skeleton .sk-line:nth-child(3){width:55%}
+
+/* Mobile responsive */
+@media(max-width:768px){
+  .csb{width:220px!important}
+  .welcome h2{font-size:22px!important}
+  .market-grid{grid-template-columns:1fr!important}
+  .skills-grid{grid-template-columns:1fr!important}
+  .mb{max-width:88%!important}
+  .nm{display:none!important}
+}
+
 </style>
 
 </head>
@@ -2897,7 +2971,7 @@ const S = {
 
 
 
-  function animate(){
+  async function animate(){
 
     ctx.clearRect(0,0,W,H);
 
@@ -2975,13 +3049,13 @@ const S = {
 
 function $(id){return document.getElementById(id)}
 
-function qs(s){return document.querySelector(s)}
+async function qs(s){return document.querySelector(s)}
 
-function qsa(s){return document.querySelectorAll(s)}
+async function qsa(s){return document.querySelectorAll(s)}
 
 
 
-function toast(msg, type='info'){
+async function toast(msg, type='info'){
 
   const tc = $('toastContainer');
 
@@ -3001,7 +3075,7 @@ function toast(msg, type='info'){
 
 
 
-function sw(p){
+async function sw(p){
 
   qsa('.page').forEach(el=>el.classList.remove('active'));
 
@@ -3047,7 +3121,7 @@ async function api(method, url, body=null){
 
 // ═══════════════════════════════════════════════
 
-function tt(){
+async function tt(){
 
   const d = document.documentElement;
 
@@ -3227,7 +3301,7 @@ async function loadConversations(){
 
 // Renommer une conversation inline (comme ChatGPT)
 
-function startRename(el, convId, titleEl){
+async function startRename(el, convId, titleEl){
 
   const currentTitle = titleEl.textContent;
 
@@ -3287,7 +3361,7 @@ function startRename(el, convId, titleEl){
 
 // Menu contextuel flottant
 
-function showConvMenu(event, convId, title){
+async function showConvMenu(event, convId, title){
 
   hideConvMenu();
 
@@ -3379,7 +3453,7 @@ function showConvMenu(event, convId, title){
 
 
 
-function hideConvMenu(){
+async function hideConvMenu(){
 
   const m = document.getElementById('convContextMenu');
 
@@ -3557,7 +3631,7 @@ function addMessage(role, content, _save, model=null){
 
 
 
-function escapeHtml(t){
+async function escapeHtml(t){
 
   const d = document.createElement('div');
 
@@ -3569,7 +3643,7 @@ function escapeHtml(t){
 
 
 
-function renderMarkdown(text){
+async function renderMarkdown(text){
 
   // Simple markdown renderer for code blocks
 
@@ -3983,7 +4057,7 @@ async function uploadFiles(files){
 
 
 
-function addFileChip(f){
+async function addFileChip(f){
 
   const fc = $('fc');
 
@@ -4145,7 +4219,7 @@ try {
 
 
 
-function tv(){
+async function tv(){
 
   if(!recognition){ toast('Reconnaissance vocale non disponible','error'); return; }
 
@@ -4245,7 +4319,7 @@ async function oM(){
 
 
 
-function selectProvider(name){
+async function selectProvider(name){
 
   S.provider = name;
 
@@ -4269,7 +4343,7 @@ function selectProvider(name){
 
 
 
-function selectModel(provider, model){
+async function selectModel(provider, model){
 
   S.provider = provider;
 
@@ -4287,7 +4361,7 @@ function selectModel(provider, model){
 
 
 
-function cM(){ $('modelModal').classList.remove('active'); }
+async function cM(){ $('modelModal').classList.remove('active'); }
 
 
 
@@ -4297,9 +4371,9 @@ function cM(){ $('modelModal').classList.remove('active'); }
 
 // ═══════════════════════════════════════════════
 
-function oS(){ $('settingsModal').classList.add('active'); }
+async function oS(){ $('settingsModal').classList.add('active'); }
 
-function cS(){ $('settingsModal').classList.remove('active'); S.sp = $('sysPrompt').value; }
+async function cS(){ $('settingsModal').classList.remove('active'); S.sp = $('sysPrompt').value; }
 
 
 
@@ -4549,7 +4623,7 @@ async function loadSkills(){
 
 
 
-function renderRepoGrid(grid, repos, source){
+async function renderRepoGrid(grid, repos, source){
 
   if(!repos.length){
 
@@ -4665,7 +4739,7 @@ async function isR(){
 
 
 
-function fillRepo(url){ $('repoUrl').value = url; $('installBtn').focus(); }
+async function fillRepo(url){ $('repoUrl').value = url; $('installBtn').focus(); }
 
 
 
@@ -4733,7 +4807,7 @@ async function exploreSkill(id){
 
 
 
-function st(tab, btn){
+async function st(tab, btn){
 
   qsa('.market-tab').forEach(el=>el.classList.remove('active'));
 
@@ -4969,7 +5043,7 @@ function openAgentModal(agent){
 
 
 
-function closeAgentModal(){
+async function closeAgentModal(){
 
   const m = document.getElementById('agentModal');
 
@@ -5043,7 +5117,7 @@ async function deleteAgent(id){
 
 
 
-function useAgent(agentId){
+async function useAgent(agentId){
 
   // Switch to chat and load agent context
 
@@ -5149,7 +5223,7 @@ async function loadProjects(){
 
 
 
-function showCreateProject(){
+async function showCreateProject(){
 
   const html = `<div class="modal-overlay active" id="projectModal" onclick="if(event.target===this)closeProjectModal()">
 
@@ -5217,7 +5291,7 @@ function showCreateProject(){
 
 
 
-function closeProjectModal(){
+async function closeProjectModal(){
 
   const m = document.getElementById('projectModal');
 
@@ -5473,7 +5547,7 @@ async function openProject(projectId){
 
 
 
-function closeProjectEditor(){
+async function closeProjectEditor(){
 
   const m = document.getElementById('projectEditor');
 
@@ -5489,7 +5563,7 @@ function closeProjectEditor(){
 
 
 
-function showNewFileForm(){
+async function showNewFileForm(){
 
   const form = document.getElementById('newFileForm');
 
@@ -5621,7 +5695,7 @@ async function deleteFile(fileId){
 
 
 
-function openProjectChat(){
+async function openProjectChat(){
 
   if(!currentProjectId) return;
 
@@ -5654,6 +5728,65 @@ function openProjectChat(){
 // INIT
 
 // ═══════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════
+// DYNAMIC PARTICLE NETWORK ANIMATION
+// ═══════════════════════════════════════════════
+
+(function(){
+  const c = document.getElementById('particleCanvas');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  let w, h, particles = [];
+  const count = 60;
+  
+  async function resize(){
+    w = c.width = window.innerWidth;
+    h = c.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+  
+  for(let i=0; i<count; i++){
+    particles.push({
+      x: Math.random()*w, y: Math.random()*h,
+      vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5,
+      r: Math.random()*2+1, a: Math.random()*0.3+0.1
+    });
+  }
+  
+  async function draw(){
+    ctx.clearRect(0,0,w,h);
+    for(let p of particles){
+      p.x += p.vx; p.y += p.vy;
+      if(p.x<0) p.x=w; if(p.x>w) p.x=0;
+      if(p.y<0) p.y=h; if(p.y>h) p.y=0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(124,58,237,'+p.a+')';
+      ctx.fill();
+    }
+    for(let i=0; i<particles.length; i++){
+      for(let j=i+1; j<particles.length; j++){
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if(dist < 120){
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = 'rgba(124,58,237,'+(0.04 * (1-dist/120))+')';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+
 
 async function init(){
 
