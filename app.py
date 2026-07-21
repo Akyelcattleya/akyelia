@@ -961,6 +961,7 @@ TRENDING_AI_REPOS = [
     "https://github.com/meta-llama/llama-models",
     "https://github.com/mistralai/mistral-inference",
     "https://github.com/deepseek-ai/DeepSeek-V3",
+    "https://github.com/asgeirtj/system_prompts_leaks",
 ]
 
 FEATURED_REPOS = [
@@ -1003,6 +1004,10 @@ FEATURED_REPOS = [
      "url": "https://github.com/scikit-learn/scikit-learn",
      "description": "scikit-learn: machine learning in Python",
      "topics": ["machine-learning", "python", "data-science"], "stars": 62000},
+    {"name": "system_prompts_leaks", "full_name": "asgeirtj/system_prompts_leaks",
+     "url": "https://github.com/asgeirtj/system_prompts_leaks",
+     "description": "🔓 Collection of leaked system prompts from various AI applications",
+     "topics": ["system-prompts", "prompt-engineering", "ai", "llm"], "stars": 1000},
 ]
 
 
