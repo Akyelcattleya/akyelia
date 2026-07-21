@@ -432,9 +432,32 @@ async def chat(request: ChatRequest):
         rows = await cursor.fetchall()
         history = [{"role": row["role"], "content": row["content"]} for row in rows]
 
+        # ===== MEMORY: recaller les souvenirs pertinents =====
+        memory_context = ""
+        try:
+            cursor = await db.execute(
+                "SELECT content, category, importance FROM memories ORDER BY importance DESC, last_recalled_at IS NULL DESC, last_recalled_at ASC LIMIT 15"
+            )
+            memories = await cursor.fetchall()
+            if memories:
+                memory_parts = []
+                for m in memories:
+                    memory_parts.append(f"- [{m['category']}] {m['content']}")
+                    await db.execute(
+                        "UPDATE memories SET last_recalled_at = CURRENT_TIMESTAMP WHERE content = ?",
+                        (m['content'],)
+                    )
+                await db.commit()
+                memory_context = "\n\n--- MÉMOIRE (souvenirs de nos conversations passées) ---\n" + "\n".join(memory_parts)
+        except Exception:
+            pass
+        
         user_content = build_user_message(request.message, request.files) if request.files else request.message
         
-        messages = [{"role": "system", "content": request.system_prompt}]
+        system = request.system_prompt
+        if memory_context:
+            system += memory_context
+        messages = [{"role": "system", "content": system}]
         messages.extend(history[-config.max_history:])
         messages.append({"role": "user", "content": user_content})
         
@@ -525,6 +548,18 @@ async def chat(request: ChatRequest):
                         (conv_id, "assistant", full_response, provider_name, model_used)
                     )
                     await db.execute("UPDATE conversations SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (conv_id,))
+                    
+                    # ===== MEMORY: auto-sauvegarder les infos clés =====
+                    try:
+                        if len(full_response) > 50 and len(request.message) > 10:
+                            memory_content = f"Utilisateur: {request.message[:100]}... | Réponse: {full_response[:150]}..."
+                            await db.execute(
+                                "INSERT INTO memories (content, category, context, source_conv_id) VALUES (?, ?, ?, ?)",
+                                (memory_content, "chat", f"Conversation {conv_id[:8]}", conv_id)
+                            )
+                            await db.commit()
+                    except Exception:
+                        pass
                     if not history and full_response[:20]:
                         await db.execute(
                             "UPDATE conversations SET title = ? WHERE id = ? AND title = 'Nouvelle conversation'",
@@ -597,6 +632,96 @@ async def delete_conversation(conv_id: str):
     finally:
         await db.close()
 
+
+# ========== MEMORY ==========
+class MemoryCreate(BaseModel):
+    content: str
+    category: str = "general"
+    context: str = ""
+
+@app.get("/api/memories")
+async def list_memories(category: str = "", search: str = ""):
+    db = await Database.open()
+    try:
+        if search:
+            cursor = await db.execute(
+                "SELECT id, content, category, context, importance, created_at, updated_at, last_recalled_at "
+                "FROM memories WHERE content LIKE ? OR context LIKE ? "
+                "ORDER BY importance DESC, updated_at DESC LIMIT 100",
+                (f"%{search}%", f"%{search}%")
+            )
+        elif category:
+            cursor = await db.execute(
+                "SELECT id, content, category, context, importance, created_at, updated_at, last_recalled_at "
+                "FROM memories WHERE category = ? ORDER BY importance DESC, updated_at DESC", (category,)
+            )
+        else:
+            cursor = await db.execute(
+                "SELECT id, content, category, context, importance, created_at, updated_at, last_recalled_at "
+                "FROM memories ORDER BY importance DESC, updated_at DESC"
+            )
+        memories = [dict(r) for r in await cursor.fetchall()]
+        return {"memories": memories, "total": len(memories)}
+    finally:
+        await db.close()
+
+@app.get("/api/memories/stats")
+async def memory_stats():
+    db = await Database.open()
+    try:
+        cursor = await db.execute("SELECT COUNT(*) as total FROM memories")
+        total = (await cursor.fetchone())["total"]
+        cursor = await db.execute(
+            "SELECT category, COUNT(*) as count FROM memories GROUP BY category ORDER BY count DESC"
+        )
+        categories = [dict(r) for r in await cursor.fetchall()]
+        cursor = await db.execute(
+            "SELECT COALESCE(SUM(importance), 0) as total_importance FROM memories"
+        )
+        row = await cursor.fetchone()
+        return {"total": total, "categories": categories, "total_importance": row["total_importance"]}
+    finally:
+        await db.close()
+
+@app.post("/api/memories")
+async def save_memory(request: MemoryCreate):
+    if not request.content or len(request.content.strip()) < 5:
+        raise HTTPException(status_code=400, detail="La mémoire doit contenir au moins 5 caractères")
+    db = await Database.open()
+    try:
+        await db.execute(
+            "INSERT INTO memories (content, category, context) VALUES (?, ?, ?)",
+            (request.content.strip(), request.category, request.context)
+        )
+        await db.commit()
+        return {"status": "ok", "id": db.lastrowid}
+    finally:
+        await db.close()
+
+@app.delete("/api/memories/{memory_id}")
+async def delete_memory(memory_id: int):
+    db = await Database.open()
+    try:
+        cursor = await db.execute("SELECT id FROM memories WHERE id = ?", (memory_id,))
+        if not await cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Mémoire introuvable")
+        await db.execute("DELETE FROM memories WHERE id = ?", (memory_id,))
+        await db.commit()
+        return {"status": "ok"}
+    finally:
+        await db.close()
+
+@app.post("/api/memories/clear")
+async def clear_memories():
+    db = await Database.open()
+    try:
+        cursor = await db.execute("SELECT COUNT(*) as count FROM memories")
+        count = (await cursor.fetchone())["count"]
+        await db.execute("DELETE FROM memories")
+        await db.commit()
+        return {"status": "ok", "deleted": count}
+    finally:
+        await db.close()
 
 @app.post("/api/conversations/clear")
 async def clear_conversation(request: Request):

@@ -364,9 +364,22 @@ async def init_database():
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
                 UNIQUE(project_id, path)
             );
+            CREATE TABLE IF NOT EXISTS memories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                content TEXT NOT NULL,
+                category TEXT DEFAULT 'general',
+                context TEXT DEFAULT '',
+                source_conv_id TEXT DEFAULT '',
+                importance INTEGER DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_recalled_at TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(category);
+            CREATE INDEX IF NOT EXISTS idx_memories_importance ON memories(importance DESC);
             CREATE INDEX IF NOT EXISTS idx_project_files_path ON project_files(project_id, path);
         """)
         await db.commit()
-        print(f"[DB] Base de données initialisée ({'PostgreSQL' if IS_POSTGRES else 'SQLite'})")
+        print(f"[DB] Base de données initialisée ({'IS_POSTGRES' if IS_POSTGRES else 'SQLite'})")
     finally:
         await db.close()
