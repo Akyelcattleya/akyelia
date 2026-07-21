@@ -962,6 +962,7 @@ TRENDING_AI_REPOS = [
     "https://github.com/mistralai/mistral-inference",
     "https://github.com/deepseek-ai/DeepSeek-V3",
     "https://github.com/asgeirtj/system_prompts_leaks",
+    "https://github.com/saynchowdhury/claude-fable-5-system-prompt",
 ]
 
 FEATURED_REPOS = [
@@ -1008,6 +1009,10 @@ FEATURED_REPOS = [
      "url": "https://github.com/asgeirtj/system_prompts_leaks",
      "description": "🔓 Collection of leaked system prompts from various AI applications",
      "topics": ["system-prompts", "prompt-engineering", "ai", "llm"], "stars": 1000},
+    {"name": "claude-fable-5-system-prompt", "full_name": "saynchowdhury/claude-fable-5-system-prompt",
+     "url": "https://github.com/saynchowdhury/claude-fable-5-system-prompt",
+     "description": "🎭 Claude Fable 5 - System prompt pour narration et écriture créative",
+     "topics": ["claude", "system-prompt", "fable", "storytelling", "ai"], "stars": 500},
 ]
 
 
