@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Factory — Command Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        /* ============================================
+           AI FACTORY COMMAND CENTER
+           Motion Design | Glassmorphism | 3D | Particles
+           ============================================ */
+        
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-secondary: #111827;
+            --bg-card: rgba(17, 24, 39, 0.7);
+            --border: rgba(56, 189, 248, 0.15);
+            --border-glow: rgba(56, 189, 248, 0.4);
+            --text: #f1f5f9;
+            --text-muted: #64748b;
+            --primary: #38bdf8;
+            --primary-dark: #0284c7;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --purple: #818cf8;
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* === PARTICLES BACKGROUND === */
+        #particles-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* === MAIN CONTAINER === */
+        .app-container {
+            position: relative;
+            z-index: 1;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* === HEADER === */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 28px;
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 28px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-icon {
+            width: 48px; height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 18px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 15px var(--success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .version-badge {
+            padding: 6px 14px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* === STATS ROW === */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 22px 20px;
+            text-align: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: default;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        .stat-card:hover::before { opacity: 1; }
+        .stat-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            border-color: var(--border-glow);
+            box-shadow: 0 12px 40px rgba(56, 189, 248, 0.15);
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* === GRID SECTIONS === */
+        .grid-sections {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .section {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: all 0.3s;
+        }
+
+        .section:hover { border-color: var(--border-glow); }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 18px;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .section-title .count {
+            padding: 2px 12px;
+            background: rgba(56, 189, 248, 0.15);
+            border-radius: 100px;
+            font-size: 0.75rem;
+            color: var(--primary);
+        }
+
+        /* === SERVICE LIST === */
+        .service-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 14px;
+            margin-bottom: 6px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .service-item:hover {
+            border-color: var(--border);
+            transform: translateX(4px);
+        }
+
+        .service-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .service-icon {
+            width: 36px; height: 36px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .service-name {
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .service-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .service-status {
+            padding: 4px 14px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .service-status.online {
+            background: rgba(34, 197, 94, 0.15);
+            color: var(--success);
+        }
+
+        .service-status.offline {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+        }
+
+        /* === MODELS LIST === */
+        .model-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            margin-bottom: 6px;
+        }
+
+        .model-item .model-name { font-size: 0.85rem; font-weight: 500; }
+        .model-item .model-size { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* === ACTIONS GRID === */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px) scale(1.02);
+            border-color: var(--primary);
+            box-shadow: 0 8px 30px rgba(56, 189, 248, 0.2);
+            background: rgba(56, 189, 248, 0.1);
+        }
+
+        .action-btn .icon {
+            font-size: 1.5rem;
+        }
+
+        .action-btn .arrow {
+            margin-left: auto;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover .arrow {
+            opacity: 1;
+            transform: translateX(4px);
+        }
+
+        /* === FEATURED SKILLS === */
+        .skill-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(56, 189, 248, 0.08);
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 100px;
+            font-size: 0.78rem;
+            margin: 4px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .skill-tag:hover {
+            background: rgba(56, 189, 248, 0.15);
+            transform: translateY(-1px);
+        }
+
+        /* === LOG AREA === */
+        .log-area {
+            margin-top: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.7;
+        }
+
+        .log-area .info { color: var(--success); }
+        .log-area .warn { color: var(--warning); }
+        .log-area .error { color: var(--danger); }
+        .log-area .system { color: var(--primary); }
+        .log-line { opacity: 0; animation: fadeIn 0.5s ease-out forwards; }
+
+        /* === COMMAND INPUT === */
+        .command-bar {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .command-bar input {
+            flex: 1;
+            padding: 14px 18px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            transition: all 0.3s;
+        }
+
+        .command-bar input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+
+        .command-bar input::placeholder {
+            color: var(--text-muted);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-execute {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-execute:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(56, 189, 248, 0.3);
+        }
+
+        /* === OVERVIEW SECTION (Full width) === */
+        .section-full {
+            grid-column: 1 / -1;
+        }
+
+        /* === ANIMATIONS === */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.2); }
+            50% { box-shadow: 0 0 40px rgba(56, 189, 248, 0.4); }
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .floating { animation: float 6s ease-in-out infinite; }
+
+        /* === SCROLLBAR === */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 900px) {
+            .grid-sections { grid-template-columns: 1fr; }
+            .header { flex-direction: column; gap: 12px; text-align: center; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .header-right { flex-wrap: wrap; justify-content: center; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: 1fr; }
+            .actions-grid { grid-template-columns: 1fr; }
+            .app-container { padding: 12px; }
+        }
+
+        /* === 3D TILT (hover effect on header) === */
+        .header {
+            transform-style: preserve-3d;
+            perspective: 1000px;
+        }
+
+        .header:hover {
+            box-shadow: 0 8px 40px rgba(56, 189, 248, 0.1);
+        }
+
+        /* === EMPTY STATE === */
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas pour les particules -->
+    <canvas id="particles-canvas"></canvas>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo-icon">🏭</div>
+                <div>
+                    <h1>AI Factory Command Center</h1>
+                    <div class="header-subtitle">Votre Usine à Agents Autonomes</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    <span id="statusText">Initialisation...</span>
+                </div>
+                <span class="version-badge">v1.0.0</span>
+            </div>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-value" id="servicesOnline">0</div>
+                <div class="stat-label">Services en ligne</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="modelsLoaded">0</div>
+                <div class="stat-label">Modèles IA</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="skillsReady">10</div>
+                <div class="stat-label">Skills Prêtes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="botsActive">0</div>
+                <div class="stat-label">Bots Actifs</div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid-sections">
+            <!-- Services -->
+            <div class="section">
+                <div class="section-title">
+                    <span>📦 Services</span>
+                    <span class="count" id="servicesCount">0/7</span>
+                </div>
+                <div id="servicesList"></div>
+
+                <div class="section-title" style="margin-top: 20px;">
+                    <span>⚡ Actions Rapides</span>
+                </div>
+                <div class="actions-grid">
+                    <button class="action-btn" onclick="runCmd('make start')">
+                        <span class="icon">🚀</span>
+                        Démarrer l'usine
+                        <span class="arrow">→</span>
+                    </button>
+                    <button class="action-btn" onclick="runCmd('make status')">
+                        <span class="icon">📊</span>
+                        État des services
+                        <span class="arrow">→</span>
+                    </button>
+                    <button class="action-btn" onclick="runCmd('make models')">
+                        <span class="icon">📦</span>
+                        Installer modèles IA
+                        <span class="arrow">→</span>
+                    </button>
+                    <button class="action-btn" onclick="runCmd('make doctor')">
+                        <span class="icon">🔧</span>
+                        Diagnostiquer
+                        <span class="arrow">→</span>
+                    </button>
+                    <button class="action-btn" onclick="window.location.href='/dashboard.html'">
+                        <span class="icon">📱</span>
+                        Dashboard Complet
+                        <span class="arrow">→</span>
+                    </button>
+                    <button class="action-btn" onclick="openSkillIngester()">
+                        <span class="icon">📥</span>
+                        Ingérer un Skill
+                        <span class="arrow">→</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Column: Models + Logs -->
+            <div class="section">
+                <div class="section-title">
+                    <span>🧠 Modèles Ollama</span>
+                </div>
+                <div id="modelsList">
+                    <div class="empty-state">Chargement des modèles...</div>
+                </div>
+
+                <div class="section-title" style="margin-top: 20px;">
+                    <span>🧩 Skills Disponibles</span>
+                </div>
+                <div id="skillsList">
+                    <span class="skill-tag">🤖 bot-generator</span>
+                    <span class="skill-tag">📥 github-ingester</span>
+                    <span class="skill-tag">📊 system-monitor</span>
+                    <span class="skill-tag">👁️ vision-skill</span>
+                    <span class="skill-tag">🌐 website-forge</span>
+                    <span class="skill-tag">🩺 self-healing</span>
+                    <span class="skill-tag">📈 marketing-agent</span>
+                    <span class="skill-tag">🔌 mcp-server</span>
+                    <span class="skill-tag">🎯 prospecting-engine</span>
+                    <span class="skill-tag">🛡️ stealth-module</span>
+                </div>
+            </div>
+
+            <!-- Logs Section (Full Width) -->
+            <div class="section section-full">
+                <div class="section-title">
+                    <span>📋 Console / Logs</span>
+                    <span>
+                        <button onclick="clearLogs()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;">Effacer</button>
+                    </span>
+                </div>
+                
+                <div class="command-bar">
+                    <input type="text" id="cmdInput" 
+                           placeholder="Entrez une commande (ex: make status, docker ps, ollama list)..." 
+                           onkeydown="if(event.key==='Enter') runCmd(this.value)">
+                    <button class="btn-execute" onclick="runCmd(document.getElementById('cmdInput').value)">⏎ Exécuter</button>
+                </div>
+
+                <div class="log-area" id="logArea">
+                    <div class="log-line system">[SYSTEM] 🏭 AI Factory Command Center initialisé</div>
+                    <div class="log-line system">[SYSTEM] Vérification des services...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // PARTICLES BACKGROUND (Motion Design)
+        // ============================================
+        class ParticleSystem {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: 0, y: 0 };
+                this.resize();
+                this.init();
+                this.animate();
+                
+                window.addEventListener('resize', () => this.resize());
+                document.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            init() {
+                const count = Math.floor((this.canvas.width * this.canvas.height) / 15000);
+                for (let i = 0; i < Math.min(count, 80); i++) {
+                    this.particles.push({
+                        x: Math.random() * this.canvas.width,
+                        y: Math.random() * this.canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 2 + 1,
+                        opacity: Math.random() * 0.5 + 0.2
+                    });
+                }
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                for (let p of this.particles) {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    
+                    if (p.x < 0) p.x = this.canvas.width;
+                    if (p.x > this.canvas.width) p.x = 0;
+                    if (p.y < 0) p.y = this.canvas.height;
+                    if (p.y > this.canvas.height) p.y = 0;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fillStyle = `rgba(56, 189, 248, ${p.opacity})`;
+                    this.ctx.fill();
+                }
+                
+                // Connections
+                for (let i = 0; i < this.particles.length; i++) {
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        const dx = this.particles[i].x - this.particles[j].x;
+                        const dy = this.particles[i].y - this.particles[j].y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (dist < 150) {
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(this.particles[i].x, this.particles[i].y);
+                            this.ctx.lineTo(this.particles[j].x, this.particles[j].y);
+                            this.ctx.strokeStyle = `rgba(56, 189, 248, ${0.1 * (1 - dist / 150)})`;
+                            this.ctx.lineWidth = 0.5;
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+                
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // Init particles
+        new ParticleSystem(document.getElementById('particles-canvas'));
+
+        // ============================================
+        // LOGGING
+        // ============================================
+        function addLog(msg, type = 'info') {
+            const area = document.getElementById('logArea');
+            const line = document.createElement('div');
+            line.className = `log-line ${type}`;
+            line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            area.appendChild(line);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logArea').innerHTML = '';
+            addLog('Console effacée', 'system');
+        }
+
+        // ============================================
+        // COMMAND EXECUTION
+        // ============================================
+        async function runCmd(cmd) {
+            if (!cmd) return;
+            
+            addLog(`$ ${cmd}`, 'system');
+            document.getElementById('cmdInput').value = '';
+            
+            try {
+                const r = await fetch('/api/factory/action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'run_command',
+                        params: { command: cmd, timeout: 30 }
+                    })
+                });
+                const data = await r.json();
+                
+                if (data.stdout) addLog(data.stdout.slice(0, 500), 'info');
+                if (data.stderr) addLog(data.stderr.slice(0, 300), 'warn');
+                if (data.success === false) addLog('❌ Commande échouée', 'error');
+                
+            } catch {
+                addLog('⚠️ AkyelIA Bridge non disponible', 'warn');
+                addLog('   Lance: python3 bridge/akyelia-bridge.py', 'system');
+            }
+            
+            // Rafraîchir les stats
+            refreshStatus();
+        }
+
+        function openSkillIngester() {
+            const url = prompt("URL du dépôt GitHub à ingérer:");
+            if (url) runCmd(`python3 skills/github-ingester.py "${url}"`);
+        }
+
+        // ============================================
+        // SERVICE STATUS
+        // ============================================
+        const SERVICES = {
+            'ollama': { icon: '🧠', name: 'Ollama', port: 11434, desc: 'Moteur LLM local' },
+            'qdrant': { icon: '💾', name: 'Qdrant', port: 6333, desc: 'Base vectorielle mémoire' },
+            'openhands': { icon: '🤖', name: 'OpenHands', port: 3000, desc: 'Agent architecte' },
+            'webui': { icon: '💬', name: 'Open WebUI', port: 3001, desc: 'Interface ChatGPT' },
+            'n8n': { icon: '⚡', name: 'n8n', port: 5678, desc: 'Workflow orchestrator' },
+            'browserless': { icon: '🌐', name: 'Browserless', port: 3002, desc: 'Navigateur headless' },
+            'mcp': { icon: '🔌', name: 'MCP Server', port: 8766, desc: 'API outils IA' },
+        };
+
+        async function refreshStatus() {
+            let online = 0;
+            const list = document.getElementById('servicesList');
+            
+            list.innerHTML = '';
+            
+            for (const [id, svc] of Object.entries(SERVICES)) {
+                const item = document.createElement('div');
+                item.className = 'service-item';
+                
+                try {
+                    const controller = new AbortController();
+                    setTimeout(() => controller.abort(), 2000);
+                    const r = await fetch(`http://localhost:${svc.port}`, {
+                        signal: controller.signal,
+                        mode: 'no-cors'
+                    });
+                    online++;
+                    item.innerHTML = `
+                        <div class="service-left">
+                            <div class="service-icon">${svc.icon}</div>
+                            <div>
+                                <div class="service-name">${svc.name}</div>
+                                <div class="service-desc">${svc.desc}</div>
+                            </div>
+                        </div>
+                        <span class="service-status online">✅ En ligne</span>`;
+                } catch {
+                    item.innerHTML = `
+                        <div class="service-left">
+                            <div class="service-icon">${svc.icon}</div>
+                            <div>
+                                <div class="service-name">${svc.name}</div>
+                                <div class="service-desc">${svc.desc}</div>
+                            </div>
+                        </div>
+                        <span class="service-status offline">❌ Hors ligne</span>`;
+                }
+                
+                list.appendChild(item);
+            }
+            
+            document.getElementById('servicesOnline').textContent = online;
+            document.getElementById('servicesCount').textContent = `${online}/${Object.keys(SERVICES).length}`;
+            
+            // Statut global
+            const statusText = document.getElementById('statusText');
+            const dot = document.querySelector('.status-dot');
+            
+            if (online === Object.keys(SERVICES).length) {
+                statusText.textContent = '✅ Tout est opérationnel';
+                dot.style.background = '#22c55e';
+                dot.style.boxShadow = '0 0 15px #22c55e';
+            } else if (online > 0) {
+                statusText.textContent = `⚠️ ${online}/${Object.keys(SERVICES).length} en ligne`;
+                dot.style.background = '#eab308';
+                dot.style.boxShadow = '0 0 15px #eab308';
+            } else {
+                statusText.textContent = '🔧 Mode local (sans Docker)';
+                dot.style.background = '#64748b';
+                dot.style.boxShadow = 'none';
+            }
+        }
+
+        // ============================================
+        // OLLAMA MODELS
+        // ============================================
+        async function checkModels() {
+            try {
+                const r = await fetch('http://localhost:11434/api/tags');
+                const data = await r.json();
+                const models = data.models || [];
+                document.getElementById('modelsLoaded').textContent = models.length;
+                
+                const list = document.getElementById('modelsList');
+                if (models.length === 0) {
+                    list.innerHTML = '<div class="empty-state">Aucun modèle chargé. Lance: make models</div>';
+                } else {
+                    list.innerHTML = models.map(m => `
+                        <div class="model-item">
+                            <span class="model-name">🤖 ${m.name}</span>
+                            <span class="model-size">${(m.size / 1e9).toFixed(1)}GB</span>
+                        </div>
+                    `).join('');
+                }
+            } catch {
+                document.getElementById('modelsLoaded').textContent = '-';
+                document.getElementById('modelsList').innerHTML = 
+                    '<div class="empty-state">Ollama non disponible. Lance d\'abord: make start</div>';
+            }
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            addLog('🔌 Connexion aux services...', 'system');
+            refreshStatus();
+            checkModels();
+            
+            // Auto-refresh
+            setInterval(refreshStatus, 15000);
+            setInterval(checkModels, 30000);
+            
+            addLog('✅ Command Center prêt', 'system');
+            addLog('💡 Utilise la barre de commande pour piloter l\'usine', 'system');
+        });
+    </script>
+</body>
+</html>

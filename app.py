@@ -1255,6 +1255,126 @@ async def marketplace_trending():
 
 
 # ============================================
+# AI FACTORY - Routes du Command Center
+# ============================================
+
+@app.get("/factory", response_class=HTMLResponse)
+async def factory_command_center():
+    """Affiche le Command Center de l'AI Factory."""
+    html_path = static_dir / "command-center.html"
+    if html_path.exists():
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>AI Factory - Command Center</h1><p>Interface non trouvée. Relance: python3 launch.py</p>")
+
+
+@app.get("/api/factory/status")
+async def factory_status():
+    """État de l'AI Factory (services, santé globale)."""
+    services = {}
+    checks = {
+        "ollama": ("http://localhost:11434/api/tags", "🧠", "Moteur LLM", True),
+        "qdrant": ("http://localhost:6333/healthz", "💾", "Base vectorielle", False),
+        "openhands": ("http://localhost:3000", "🤖", "Agent architecte", True),
+        "webui": ("http://localhost:3001", "💬", "Interface chat", True),
+        "n8n": ("http://localhost:5678", "⚡", "Workflows", True),
+        "browserless": ("http://localhost:3002", "🌐", "Navigateur", False),
+    }
+    
+    for name, (url, icon, desc, _) in checks.items():
+        try:
+            async with httpx.AsyncClient(timeout=3) as client:
+                r = await client.get(url)
+                services[name] = {
+                    "status": "online", "icon": icon, "description": desc,
+                    "port": url.split(":")[-1].split("/")[0]
+                }
+        except Exception:
+            services[name] = {
+                "status": "offline", "icon": icon, "description": desc,
+                "port": url.split(":")[-1].split("/")[0]
+            }
+    
+    online_count = sum(1 for s in services.values() if s["status"] == "online")
+    
+    return {
+        "factory_name": "AI Factory",
+        "version": "1.0.0",
+        "services": services,
+        "online": online_count,
+        "total": len(services),
+        "status": "operational" if online_count == len(services) else "degraded" if online_count > 0 else "offline"
+    }
+
+
+@app.post("/api/factory/action")
+async def factory_action(request: Request):
+    """Exécute une action dans l'AI Factory."""
+    try:
+        data = await request.json()
+    except Exception:
+        data = {}
+    
+    action = data.get("action", "")
+    params = data.get("params", {})
+    
+    if action == "run_command":
+        cmd = params.get("command", "")
+        timeout = params.get("timeout", 30)
+        if not cmd:
+            raise HTTPException(status_code=400, detail="Commande requise")
+        try:
+            result = subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=timeout
+            )
+            return {
+                "stdout": result.stdout[-2000:],
+                "stderr": result.stderr[-1000:],
+                "return_code": result.returncode,
+                "success": result.returncode == 0
+            }
+        except subprocess.TimeoutExpired:
+            return {"error": "Timeout", "success": False}
+        except Exception as e:
+            return {"error": str(e), "success": False}
+    
+    elif action == "factory_logs":
+        service = params.get("service", "all")
+        lines = params.get("lines", 50)
+        try:
+            if service == "all":
+                result = subprocess.run(
+                    ["docker", "compose", "logs", "--tail", str(lines)],
+                    capture_output=True, text=True, timeout=10
+                )
+            else:
+                result = subprocess.run(
+                    ["docker", "logs", f"ai-factory-{service}", "--tail", str(lines)],
+                    capture_output=True, text=True, timeout=10
+                )
+            return {"logs": result.stdout[-3000:]}
+        except Exception as e:
+            return {"error": str(e)}
+    
+    elif action == "factory_models":
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                r = await client.get("http://localhost:11434/api/tags")
+                if r.status_code == 200:
+                    models = r.json().get("models", [])
+                    return {
+                        "models": [{
+                            "name": m["name"],
+                            "size": f"{m.get('size', 0)/1e9:.1f}GB"
+                        } for m in models]
+                    }
+                return {"models": []}
+        except Exception:
+            return {"models": [], "error": "Ollama indisponible"}
+    
+    return {"status": "unknown", "message": f"Action '{action}' non reconnue"}
+
+
+# ============================================
 # WEB SEARCH
 # ============================================
 @app.post("/api/web-search")

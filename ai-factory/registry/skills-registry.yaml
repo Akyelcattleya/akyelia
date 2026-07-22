@@ -1,0 +1,125 @@
+# ============================================
+# AI FACTORY - Registre des Skills
+# ============================================
+# Ce fichier est l'index central de toutes
+# les compétences installées dans l'AI Factory.
+# OpenHands l'utilise pour savoir quels outils
+# sont disponibles.
+# ============================================
+
+version: "1.0"
+last_updated: "2026-07-22"
+
+# ============================================
+# SKILLS DISPONIBLES
+# ============================================
+skills:
+
+  - name: "stealth-module"
+    source: "built-in"
+    type: "browser-automation"
+    path: "/opt/ai-factory/skills/stealth-module/"
+    description: "Template de bot furtif avec Playwright + anti-détection"
+    version: "1.0.0"
+    enabled: true
+    api_endpoint: ""
+    health_check: "python3 template.py --test"
+
+  - name: "ollama-llm"
+    source: "docker"
+    type: "llm-inference"
+    path: ""
+    description: "Moteur d'inférence LLM local (Qwen, DeepSeek, LLaVA...)"
+    version: "latest"
+    enabled: true
+    api_endpoint: "http://ollama:11434"
+    health_check: "curl -f http://ollama:11434/api/tags"
+
+  - name: "qdrant-memory"
+    source: "docker"
+    type: "vector-database"
+    path: ""
+    description: "Base vectorielle pour la mémoire à long terme (RAG)"
+    version: "latest"
+    enabled: true
+    api_endpoint: "http://qdrant:6333"
+    health_check: "curl -f http://qdrant:6333/healthz"
+
+  - name: "n8n-automation"
+    source: "docker"
+    type: "workflow-orchestrator"
+    path: ""
+    description: "Orchestrateur de workflows visuel (no-code)"
+    version: "latest"
+    enabled: true
+    api_endpoint: "http://n8n:5678"
+    health_check: ""
+
+  - name: "open-webui"
+    source: "docker"
+    type: "chat-interface"
+    path: ""
+    description: "Interface ChatGPT-like connectée à Ollama"
+    version: "latest"
+    enabled: true
+    api_endpoint: "http://open-webui:8080"
+    health_check: ""
+
+  - name: "browserless-chrome"
+    source: "docker"
+    type: "headless-browser"
+    path: ""
+    description: "Service de navigateur headless pour le scraping"
+    version: "latest"
+    enabled: true
+    api_endpoint: "http://browserless:3000"
+    health_check: "curl -f http://browserless:3000/health"
+
+  # ============================================
+  # SKILLS À INSTALLER (liens GitHub)
+  # ============================================
+  # Ces skills sont identifiés mais pas encore clonés.
+  # OpenHands les installera sur demande.
+  # ============================================
+pending:
+  - name: "browser-use"
+    url: "https://github.com/nicegui-org/browser-use"
+    description: "Agent de navigation visuelle par IA"
+    priority: "high"
+    type: "browser-automation"
+
+  - name: "playwright-stealth"
+    url: "https://github.com/Atrox/playwright-stealth"
+    description: "Patches anti-détection pour Playwright"
+    priority: "high"
+    type: "browser-automation"
+
+  - name: "omniparser"
+    url: "https://github.com/microsoft/OmniParser"
+    description: "Parser visuel pour interfaces utilisateur"
+    priority: "high"
+    type: "vision"
+
+  - name: "posthog"
+    url: "https://github.com/PostHog/posthog"
+    description: "Analytics open-source pour bots"
+    priority: "medium"
+    type: "analytics"
+
+  - name: "firecrawl"
+    url: "https://github.com/nicegui-org/firecrawl"
+    description: "Web scraping optimisé pour LLM"
+    priority: "medium"
+    type: "scraping"
+
+  - name: "aider"
+    url: "https://github.com/paul-gauthier/aider"
+    description: "Pair-programming IA dans le terminal"
+    priority: "high"
+    type: "coding"
+
+  - name: "langgraph"
+    url: "https://github.com/langchain-ai/langgraph"
+    description: "Framework d'agents autonomes"
+    priority: "high"
+    type: "agent-framework"

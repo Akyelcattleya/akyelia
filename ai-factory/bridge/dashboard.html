@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Factory — Dashboard</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --border: #334155;
+            --text: #e2e8f0;
+            --muted: #64748b;
+            --primary: #38bdf8;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+            --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* Header */
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px 0; border-bottom: 1px solid var(--border); margin-bottom: 30px;
+        }
+        .header h1 { 
+            font-size: 1.8rem; font-weight: 800; 
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .header-status {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 16px; border-radius: 20px;
+            background: var(--card); border: 1px solid var(--border); font-size: 0.875rem;
+        }
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        .status-dot.online { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        .status-dot.offline { background: var(--danger); }
+        .status-dot.partial { background: var(--warning); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px; margin-bottom: 30px;
+        }
+        .stat-card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px; text-align: center;
+            transition: all 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-2px); border-color: var(--primary); }
+        .stat-value { font-size: 2rem; font-weight: 800; color: var(--primary); }
+        .stat-label { color: var(--muted); font-size: 0.875rem; margin-top: 4px; }
+
+        /* Cards */
+        .card {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
+        }
+        .card h2 { font-size: 1.2rem; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+        /* Services */
+        .services-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+        }
+        .service-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: var(--bg); border-radius: 8px;
+            border: 1px solid var(--border); transition: all 0.3s;
+        }
+        .service-item:hover { border-color: var(--primary); }
+        .service-info { display: flex; align-items: center; gap: 10px; }
+        .service-icon { font-size: 1.5rem; }
+        .service-name { font-weight: 500; }
+        .service-status {
+            padding: 4px 12px; border-radius: 12px; font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .service-status.up { background: rgba(34,197,94,0.15); color: var(--success); }
+        .service-status.down { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+        /* Bots */
+        .bot-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px; background: var(--bg); border-radius: 8px;
+            border: 1px solid var(--border); margin-bottom: 8px;
+        }
+        .bot-name { font-weight: 500; }
+        .bot-status { font-size: 0.875rem; }
+        .bot-actions { display: flex; gap: 8px; }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+            font-size: 0.875rem; font-weight: 500; transition: all 0.3s;
+        }
+        .btn-primary { background: var(--primary); color: #0f172a; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(56,189,248,0.3); }
+        .btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-outline:hover { border-color: var(--primary); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg); padding: 4px; border-radius: 8px; }
+        .tab {
+            padding: 8px 20px; border-radius: 6px; cursor: pointer;
+            border: none; background: transparent; color: var(--muted); font-size: 0.875rem;
+            transition: all 0.3s;
+        }
+        .tab.active { background: var(--primary); color: #0f172a; font-weight: 600; }
+        .tab:hover:not(.active) { color: var(--text); }
+
+        /* Grid layout */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        /* Form */
+        .input-group { display: flex; gap: 10px; margin-bottom: 15px; }
+        .input-group input {
+            flex: 1; padding: 10px 14px; border-radius: 8px;
+            border: 1px solid var(--border); background: var(--bg);
+            color: var(--text); font-size: 0.875rem;
+        }
+        .input-group input:focus { outline: none; border-color: var(--primary); }
+
+        /* Logs */
+        .log-area {
+            background: #0a0f1e; border: 1px solid var(--border); border-radius: 8px;
+            padding: 15px; font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.8rem; max-height: 200px; overflow-y: auto;
+            color: #94a3b8; line-height: 1.5;
+        }
+        .log-area .info { color: #22c55e; }
+        .log-area .warn { color: #eab308; }
+        .log-area .error { color: #ef4444; }
+
+        /* Empty state */
+        .empty { text-align: center; padding: 40px; color: var(--muted); }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header { flex-direction: column; gap: 15px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🏭 AI Factory Dashboard</h1>
+            <div class="header-status">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">Vérification...</span>
+            </div>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="servicesUp">0</div>
+                <div class="stat-label">Services en ligne</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="botsCount">0</div>
+                <div class="stat-label">Bots actifs</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="modelsCount">0</div>
+                <div class="stat-label">Modèles IA</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="skillsCount">0</div>
+                <div class="stat-label">Skills installées</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('overview')">📊 Vue d'ensemble</button>
+            <button class="tab" onclick="switchTab('bots')">🤖 Bots</button>
+            <button class="tab" onclick="switchTab('skills')">🧩 Skills</button>
+            <button class="tab" onclick="switchTab('logs')">📋 Logs</button>
+            <button class="tab" onclick="switchTab('create')">✨ Créer</button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="tab-overview" class="tab-content">
+            <div class="grid-2">
+                <!-- Services -->
+                <div class="card">
+                    <h2>📦 Services</h2>
+                    <div class="services-grid" id="servicesList">
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-icon">🧠</span>
+                                <span class="service-name">Ollama</span>
+                            </div>
+                            <span class="service-status" id="svc-ollama">...</span>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-icon">💾</span>
+                                <span class="service-name">Qdrant</span>
+                            </div>
+                            <span class="service-status" id="svc-qdrant">...</span>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-icon">🧠</span>
+                                <span class="service-name">OpenHands</span>
+                            </div>
+                            <span class="service-status" id="svc-openhands">...</span>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-icon">💬</span>
+                                <span class="service-name">Open WebUI</span>
+                            </div>
+                            <span class="service-status" id="svc-webui">...</span>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-icon">⚡</span>
+                                <span class="service-name">n8n</span>
+                            </div>
+                            <span class="service-status" id="svc-n8n">...</span>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-icon">🌐</span>
+                                <span class="service-name">Browserless</span>
+                            </div>
+                            <span class="service-status" id="svc-browserless">...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Models -->
+                <div class="card">
+                    <h2>🧠 Modèles Ollama</h2>
+                    <div id="modelsList">
+                        <div class="empty">Chargement...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <h2>⚡ Actions rapides</h2>
+                <div class="input-group">
+                    <input type="text" id="quickCmd" placeholder="Commande à exécuter (ex: docker ps, ollama list)">
+                    <button class="btn btn-primary" onclick="runQuickCmd()">Exécuter</button>
+                </div>
+                <div class="log-area" id="quickResult"></div>
+            </div>
+        </div>
+
+        <!-- Bots Tab -->
+        <div id="tab-bots" class="tab-content" style="display:none">
+            <div class="card">
+                <h2>🤖 Bots actifs</h2>
+                <div id="botsList">
+                    <div class="empty">Chargement...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Tab -->
+        <div id="tab-skills" class="tab-content" style="display:none">
+            <div class="card">
+                <h2>🧩 Skills disponibles</h2>
+                <div id="skillsList">
+                    <div class="empty">Chargement...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="tab-logs" class="tab-content" style="display:none">
+            <div class="card">
+                <h2>📋 Logs en direct</h2>
+                <div class="log-area" id="logsArea">
+                    <div class="info">[SYSTEM] Dashboard démarré</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Tab -->
+        <div id="tab-create" class="tab-content" style="display:none">
+            <div class="grid-2">
+                <div class="card">
+                    <h2>🤖 Créer un bot</h2>
+                    <div class="input-group">
+                        <input type="text" id="botDesc" placeholder="Décris ce que le bot doit faire...">
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="botPlatform" placeholder="Plateforme (linkedin, instagram, web)">
+                    </div>
+                    <button class="btn btn-primary" onclick="createBot()">🚀 Générer le bot</button>
+                    <div id="botResult" style="margin-top:10px"></div>
+                </div>
+                <div class="card">
+                    <h2>📥 Ingérer un skill GitHub</h2>
+                    <div class="input-group">
+                        <input type="text" id="skillUrl" placeholder="URL du dépôt GitHub...">
+                    </div>
+                    <button class="btn btn-primary" onclick="ingestSkill()">📦 Ingérer</button>
+                    <div id="skillResult" style="margin-top:10px"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // ÉTAT GLOBAL
+        // ============================================
+        const STATE = {
+            services: {
+                ollama: { port: 11434 },
+                qdrant: { port: 6333 },
+                openhands: { port: 3000 },
+                webui: { port: 3001 },
+                n8n: { port: 5678 },
+                browserless: { port: 3002 }
+            },
+            logs: []
+        };
+
+        // ============================================
+        // ONGLETS
+        // ============================================
+        function switchTab(name) {
+            document.querySelectorAll('.tab-content').forEach(t => t.style.display = 'none');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            
+            document.getElementById('tab-' + name).style.display = 'block';
+            document.querySelector(`.tab[onclick*="${name}"]`).classList.add('active');
+        }
+
+        // ============================================
+        // VÉRIFICATION DES SERVICES
+        // ============================================
+        async function checkServices() {
+            let up = 0;
+            
+            for (const [name, info] of Object.entries(STATE.services)) {
+                try {
+                    const controller = new AbortController();
+                    const timeout = setTimeout(() => controller.abort(), 3000);
+                    
+                    const r = await fetch(`http://localhost:${info.port}`, { 
+                        signal: controller.signal,
+                        mode: 'no-cors'
+                    });
+                    clearTimeout(timeout);
+                    
+                    const el = document.getElementById('svc-' + name);
+                    if (el) { el.textContent = '✅ En ligne'; el.className = 'service-status up'; }
+                    up++;
+                } catch {
+                    const el = document.getElementById('svc-' + name);
+                    if (el) { el.textContent = '❌ Hors ligne'; el.className = 'service-status down'; }
+                }
+            }
+            
+            document.getElementById('servicesUp').textContent = `${up}/${Object.keys(STATE.services).length}`;
+            
+            // Statut global
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            if (up === Object.keys(STATE.services).length) {
+                dot.className = 'status-dot online';
+                text.textContent = '✅ Tous les services en ligne';
+            } else if (up > 0) {
+                dot.className = 'status-dot partial';
+                text.textContent = `⚠️ ${up}/${Object.keys(STATE.services).length} services en ligne`;
+            } else {
+                dot.className = 'status-dot offline';
+                text.textContent = '❌ Aucun service détecté';
+            }
+        }
+
+        // ============================================
+        // MODÈLES OLLAMA
+        // ============================================
+        async function checkModels() {
+            try {
+                const r = await fetch('http://localhost:11434/api/tags');
+                const data = await r.json();
+                const models = data.models || [];
+                document.getElementById('modelsCount').textContent = models.length;
+                
+                const list = document.getElementById('modelsList');
+                if (models.length === 0) {
+                    list.innerHTML = '<div class="empty">Aucun modèle chargé</div>';
+                } else {
+                    list.innerHTML = models.map(m => `
+                        <div class="bot-item">
+                            <span class="bot-name">🤖 ${m.name}</span>
+                            <span class="bot-status">${(m.size / 1e9).toFixed(1)}GB</span>
+                        </div>
+                    `).join('');
+                }
+            } catch {
+                document.getElementById('modelsList').innerHTML = 
+                    '<div class="empty">Ollama non disponible</div>';
+            }
+        }
+
+        // ============================================
+        // BOTS DOCKER
+        // ============================================
+        async function checkBots() {
+            // Simulé car on ne peut pas appeler docker depuis le navigateur
+            document.getElementById('botsCount').textContent = '-';
+            document.getElementById('botsList').innerHTML = `
+                <div class="empty">
+                    Utilise le terminal pour voir les bots :
+                    <br><code style="background:#334155;padding:4px 8px;border-radius:4px;margin-top:8px;display:inline-block;">
+                    docker ps --filter name=bot-
+                    </code>
+                    <br><br>Ou le MCP Server: <code style="background:#334155;padding:4px 8px;border-radius:4px;">
+                    python3 skills/mcp-server.py --call docker_ps '{}'
+                    </code>
+                </div>`;
+        }
+
+        // ============================================
+        // SKILLS
+        // ============================================
+        async function checkSkills() {
+            // Simulé - dans un déploiement réel, appele le bridge API
+            const knownSkills = [
+                "bot-generator", "github-ingester", "system-monitor", 
+                "vision-skill", "website-forge", "self-healing", 
+                "marketing-agent", "mcp-server", "prospecting-engine",
+                "stealth-module"
+            ];
+            
+            document.getElementById('skillsCount').textContent = knownSkills.length;
+            
+            const list = document.getElementById('skillsList');
+            list.innerHTML = knownSkills.map(s => `
+                <div class="bot-item">
+                    <span class="bot-name">🧩 ${s}</span>
+                    <span class="bot-status">✅ Disponible</span>
+                </div>
+            `).join('');
+        }
+
+        // ============================================
+        // COMMANDE RAPIDE
+        // ============================================
+        async function runQuickCmd() {
+            const cmd = document.getElementById('quickCmd').value;
+            const result = document.getElementById('quickResult');
+            
+            if (!cmd) { result.innerHTML = '<span class="warn">⚠️ Entrez une commande</span>'; return; }
+            
+            result.innerHTML = `<span class="info">⏳ Exécution: ${cmd}</span>`;
+            
+            try {
+                const r = await fetch('http://localhost:8766/tools/run_command/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: cmd, timeout: 15 })
+                });
+                const data = await r.json();
+                
+                result.innerHTML = `
+                    <div class="info">✅ Code: ${data.return_code ?? 'N/A'}</div>
+                    <pre style="margin-top:8px">${data.stdout || data.error || 'Pas de sortie'}</pre>
+                    ${data.stderr ? `<div class="error">${data.stderr}</div>` : ''}
+                `;
+            } catch {
+                result.innerHTML = `<span class="warn">⚠️ MCP Server non disponible</span>
+                <br><small>Lance: python3 skills/mcp-server.py</small>`;
+            }
+        }
+
+        // ============================================
+        // CRÉER UN BOT
+        // ============================================
+        async function createBot() {
+            const desc = document.getElementById('botDesc').value;
+            const platform = document.getElementById('botPlatform').value;
+            const result = document.getElementById('botResult');
+            
+            if (!desc) { result.innerHTML = '<span class="warn">⚠️ Décris le bot</span>'; return; }
+            
+            result.innerHTML = '<span class="info">⏳ Génération en cours...</span>';
+            
+            try {
+                const r = await fetch('http://localhost:8766/tools/run_command/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        command: `python3 skills/bot-generator.py --target "${platform || 'web'}" --action "${desc}"`,
+                        timeout: 120
+                    })
+                });
+                const data = await r.json();
+                result.innerHTML = `<div class="info">✅ Bot généré</div>
+                <pre style="margin-top:8px;font-size:0.8rem">${(data.stdout || data.error || '').slice(0,500)}</pre>`;
+            } catch {
+                result.innerHTML = `<span class="warn">⚠️ Bot Generator non accessible</span>
+                <br><small>Lance: python3 skills/bot-generator.py --interactive</small>`;
+            }
+        }
+
+        // ============================================
+        // INGÉRER UN SKILL
+        // ============================================
+        async function ingestSkill() {
+            const url = document.getElementById('skillUrl').value;
+            const result = document.getElementById('skillResult');
+            
+            if (!url) { result.innerHTML = '<span class="warn">⚠️ Entrez une URL GitHub</span>'; return; }
+            
+            result.innerHTML = '<span class="info">⏳ Ingestion en cours...</span>';
+            
+            try {
+                const r = await fetch('http://localhost:8766/tools/run_command/call', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        command: `python3 skills/github-ingester.py "${url}"`,
+                        timeout: 120
+                    })
+                });
+                const data = await r.json();
+                result.innerHTML = `<div class="info">✅ Skill ingéré</div>
+                <pre style="margin-top:8px;font-size:0.8rem">${(data.stdout || data.error || '').slice(0,500)}</pre>`;
+            } catch {
+                result.innerHTML = `<span class="warn">⚠️ GitHub Ingester non accessible</span>
+                <br><small>Lance: python3 skills/github-ingester.py --interactive</small>`;
+            }
+        }
+
+        // ============================================
+        // LOGS
+        // ============================================
+        function addLog(msg, type = 'info') {
+            const area = document.getElementById('logsArea');
+            const time = new Date().toLocaleTimeString();
+            area.innerHTML += `<div class="${type}">[${time}] ${msg}</div>`;
+            area.scrollTop = area.scrollHeight;
+        }
+
+        // ============================================
+        // RAFFRAÎCHISSEMENT
+        // ============================================
+        async function refreshAll() {
+            await Promise.all([
+                checkServices(),
+                checkModels(),
+                checkBots(),
+                checkSkills()
+            ]);
+            addLog('Raffraîchissement terminé');
+        }
+
+        // ============================================
+        // INITIALISATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAll();
+            setInterval(refreshAll, 30000); // Rafraîchir toutes les 30s
+            addLog('Dashboard initialisé', 'info');
+            addLog('Services en cours de vérification...', 'info');
+        });
+    </script>
+</body>
+</html>

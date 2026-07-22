@@ -1,0 +1,65 @@
+# ============================================
+# AI FACTORY - Caddy Reverse Proxy Configuration
+# ============================================
+# Caddy gère automatiquement les certificats SSL
+# via Let's Encrypt. Remplace "exemple.com"
+# par ton vrai domaine.
+# ============================================
+
+{
+    # Stockage des certificats
+    storage file /data
+    # Email pour les notifications Let's Encrypt
+    email admin@exemple.com
+}
+
+# === OpenHands - Agent Architecte ===
+openhands.exemple.com {
+    reverse_proxy openhands:3000 {
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    encode gzip zstd
+    
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+}
+
+# === n8n - Workflow Orchestrator ===
+n8n.exemple.com {
+    reverse_proxy n8n:5678 {
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    encode gzip zstd
+}
+
+# === Open WebUI - Chat Interface ===
+chat.exemple.com {
+    reverse_proxy open-webui:8080 {
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    
+    encode gzip zstd
+}
+
+# === Ollama API (Protégé par IP si nécessaire) ===
+# api-ollama.exemple.com {
+#     reverse_proxy ollama:11434
+#     
+#     # Option : restreindre à ton IP fixe
+#     # @block not remote_ip TON_IP_FIXE
+#     # abort @block
+# }
+
+# === Qdrant Dashboard ===
+# qdrant.exemple.com {
+#     reverse_proxy qdrant:6333
+# }

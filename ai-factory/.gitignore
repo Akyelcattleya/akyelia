@@ -1,0 +1,88 @@
+# ============================================
+# AI FACTORY - .gitignore
+# ============================================
+
+# Environment variables (contient des clés API !)
+.env
+.env.local
+*.env
+
+# Données persistantes générées
+data/
+data/ollama/**
+data/qdrant/**
+data/n8n/**
+data/open-webui/**
+data/caddy/data/**
+data/caddy/config/**
+!data/.gitkeep
+
+# Workspace (projets générés)
+workspace/**
+!workspace/.gitkeep
+
+# Logs
+data/logs/**
+*.log
+*.log.*
+
+# Bots générés par Docker
+bot-*/
+container-*/
+
+# Caches Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Caches Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Rapports générés
+*.html
+!dashboard.html
+!index.html
+
+# Résultats de vision
+vision-results.json
+vision-report.html
+
+# Contenu marketing généré
+workspace/content/
+workspace/campaigns/
+
+# Base de données locale
+*.db
+*.sqlite
+
+# IDs et tokens
+*.pem
+*.key
+*.crt
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Docker
+.docker/
+
+# Fichiers temporaires
+tmp/
+temp/
+*.bak
+*.tmp

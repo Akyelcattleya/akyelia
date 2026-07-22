@@ -1,0 +1,257 @@
+# ============================================
+# AI FACTORY - Stack Docker Complète
+# Usine à Agents Autonomes & IA Souveraine
+# ============================================
+# Usage: docker compose up -d
+# Ports: 3000 (OpenHands) | 11434 (Ollama) | 6333 (Qdrant)
+#        5678 (n8n) | 3001 (Open WebUI) | 3002 (Browserless)
+#        80/443 (Caddy - SSL automatique)
+# ============================================
+
+name: ai-factory
+
+services:
+  # ==========================================
+  # 1. LE CERVEAU - Agent Architecte
+  # OpenHands : Agent IA qui code, déploie et gère
+  # les autres conteneurs de façon autonome.
+  # Il a accès au socket Docker pour créer des bots.
+  # ==========================================
+  openhands:
+    image: ghcr.io/all-hands-ai/openhands:latest
+    container_name: ai-factory-openhands
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - SANDBOX_USER_ID=0
+      - WORKSPACE_MOUNT_PATH=/opt/ai-factory/workspace
+      - LOG_ALL_EVENTS=true
+      - OPENHANDS_AGENT__ENABLE_AUTO_COMPLETE=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./workspace:/opt/ai-factory/workspace
+      - ./skills:/opt/ai-factory/skills
+      - ./config/openhands:/home/openhands/.config/openhands
+    networks:
+      - ai-factory-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openhands.rule=Host(`openhands.votre-domaine.com`)"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================
+  # 2. L'INTELLIGENCE - Moteur d'Inférence Local
+  # Ollama : Fait tourner les LLMs open-source
+  # (Qwen, DeepSeek, LLaVA, Mistral, Llama...)
+  # sur ton propre matériel, 100% gratuit et illimité.
+  # ==========================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-factory-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./data/ollama:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_MAX_LOADED_MODELS=2
+    networks:
+      - ai-factory-net
+    # Décommente si ton VPS a un GPU NVIDIA :
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================
+  # 3. LA MÉMOIRE - Base Vectorielle
+  # Qdrant : Stocke les souvenirs, patterns de
+  # blocage, embeddings de projets, logs de bots.
+  # Essentiel pour le RAG et l'apprentissage continu.
+  # ==========================================
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: ai-factory-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - ./data/qdrant:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - ai-factory-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================
+  # 4. L'ORCHESTRATEUR - Automatisation des Flux
+  # n8n : Le "colle-tout" visuel. Relie tes bots,
+  # tes APIs, tes réseaux sociaux, tes emails.
+  # Workflows sans code / low-code.
+  # ==========================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: ai-factory-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    volumes:
+      - ./data/n8n:/home/node/.n8n
+      - ./workspace:/workspace
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD:-changeme123}
+      - N8N_HOST=n8n.votre-domaine.com
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.votre-domaine.com
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+    networks:
+      - ai-factory-net
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.votre-domaine.com`)"
+
+  # ==========================================
+  # 5. L'INTERFACE - ChatGPT-like Privée
+  # Open WebUI : Interface utilisateur type ChatGPT
+  # connectée à ton Ollama local. Gère les fichiers,
+  # le RAG, les conversations.
+  # ==========================================
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: ai-factory-webui
+    restart: unless-stopped
+    ports:
+      - "3001:8080"
+    volumes:
+      - ./data/open-webui:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-}
+      - WEBUI_NAME=AI Factory
+      - ENABLE_RAG_SEARCH=true
+      - RAG_EMBEDDING_ENGINE=ollama
+      - RAG_EMBEDDING_MODEL=nomic-embed-text
+    networks:
+      - ai-factory-net
+    depends_on:
+      ollama:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.webui.rule=Host(`chat.votre-domaine.com`)"
+
+  # ==========================================
+  # 6. LE NAVIGATEUR - Moteur de Bots Furtifs
+  # Browserless : Navigateur headless Chrome
+  # utilisable par tes bots pour le scraping,
+  # l'automatisation web et la navigation furtive.
+  # ==========================================
+  browserless:
+    image: browserless/chrome:latest
+    container_name: ai-factory-browserless
+    restart: unless-stopped
+    ports:
+      - "3002:3000"
+    environment:
+      - MAX_CONCURRENT_SESSIONS=5
+      - MAX_QUEUE_LENGTH=20
+      - PREBOOT_CHROME=true
+      - CONNECTION_TIMEOUT=60000
+      - DEFAULT_BLOCK_ADS=true
+      - ENABLE_CORS=true
+      - ENABLE_XVBF=true
+      - WORKSPACE_DIR=/workspace
+    volumes:
+      - ./workspace:/workspace
+    networks:
+      - ai-factory-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================
+  # 7. LE PROXY - Reverse Proxy avec SSL Auto
+  # Caddy : Gère les certificats HTTPS
+  # automatiquement via Let's Encrypt.
+  # Remplace "votre-domaine.com" par ton vrai domaine.
+  # ==========================================
+  caddy:
+    image: caddy:alpine
+    container_name: ai-factory-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./data/caddy/data:/data
+      - ./data/caddy/config:/config
+    networks:
+      - ai-factory-net
+    depends_on:
+      - open-webui
+      - n8n
+      - openhands
+
+  # ==========================================
+  # 8. VISION - Analyse d'Images (Optionnel)
+  # ComfyUI : Génération d'images et vision
+  # Décommente si tu veux la génération d'images
+  # ==========================================
+  # comfyui:
+  #   image: yankooliveira/comfyui:latest
+  #   container_name: ai-factory-comfyui
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8188:8188"
+  #   volumes:
+  #     - ./data/comfyui:/workspace
+  #     - ./data/comfyui/models:/models
+  #   networks:
+  #     - ai-factory-net
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+
+# ==========================================
+# RÉSEAU INTERNE
+# Tous les services communiquent entre eux
+# via ce réseau privé.
+# ==========================================
+networks:
+  ai-factory-net:
+    name: ai-factory-net
+    driver: bridge
