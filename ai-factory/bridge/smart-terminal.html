@@ -292,7 +292,7 @@ const STATE = {
   isStreaming: false,
   modelManual: 'auto',
   files: [],
-  webSearch: true
+  webSearch: false
 };
 
 // ============================================
@@ -790,9 +790,6 @@ function toggleWebSearch() {
     showToast('🌐 Recherche web désactivée');
   }
 }
-// Activer par défaut
-toggleWebSearch();
-
 // TOAST
 function showToast(msg) {
   const t = document.getElementById('toast');
