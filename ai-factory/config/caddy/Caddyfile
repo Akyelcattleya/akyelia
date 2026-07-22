@@ -1,40 +1,37 @@
 # ============================================
-# AI FACTORY - Caddy Configuration
+# AI FACTORY - Caddy Configuration v2.0
 # ============================================
-# Mode HTTP — Sert le portail + proxy tous les services
+# Sert le Smart Terminal (chat unique ChatGPT-like)
+# Proxifie les requêtes API vers le Smart Router
 # ============================================
-
-{
-    # Évite les erreurs de certificat en HTTP
-    local_certs
-}
 
 :80 {
-    # Sert les fichiers statiques depuis /srv
     root * /srv
     
-    # Portal — page d'accueil par défaut
-    try_files portal.html /portal.html
+    # SMART TERMINAL — Le chat unique (page d'accueil)
+    try_files smart-terminal.html /smart-terminal.html
     
-    # Fichiers statiques
+    # Fallback sur portal.html si smart-terminal n'existe pas
+    try_files portal.html
+    
     file_server
     
     # ============================================
-    # SMART ROUTER — Le chat unique avec routage IA
+    # API — Proxy vers le Smart Router
     # ============================================
     handle_path /api/* {
         reverse_proxy smart-router:8765
     }
     
     # ============================================
-    # STATUT — Vérification santé
+    # STATUT — Healthcheck
     # ============================================
     handle /status {
         header Content-Type "application/json"
-        respond `{"status":"ok","version":"2.0","services":["openhands","webui","ollama","qdrant","n8n","browserless","smart-router"]}`
+        respond `{"status":"ok","version":"2.0","services":["openhands","webui","ollama","qdrant","n8n","browserless","smart-router"],"models":10}`
     }
     
-    # Headers de sécurité
+    # Headers
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
@@ -42,22 +39,5 @@
         -Server
     }
     
-    # Compression
     encode gzip zstd
 }
-
-# ============================================
-# Redirection HTTP vers HTTPS (si domaine)
-# ============================================
-# openhands.tondomaine.com {
-#     reverse_proxy openhands:3000
-# }
-# chat.tondomaine.com {
-#     reverse_proxy open-webui:8080
-# }
-# router.tondomaine.com {
-#     reverse_proxy smart-router:8765
-# }
-# n8n.tondomaine.com {
-#     reverse_proxy n8n:5678
-# }
