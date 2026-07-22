@@ -10,25 +10,26 @@
 }
 
 :80 {
-    # Sert portal.html à la racine
     root * /srv
-    file_server portal.html
     
-    # Fallback : liste les fichiers si portal.html existe pas
-    try_files portal.html {path}
+    # Redirige la racine vers portal.html
+    rewrite / /portal.html
+    
+    # Sert les fichiers statiques du dossier /srv
+    file_server
     
     # Proxy vers OpenHands
-    handle_path /openhands* {
+    handle_path /openhands/* {
         reverse_proxy openhands:3000
     }
     
     # Proxy vers Open WebUI
-    handle_path /chat* {
+    handle_path /chat/* {
         reverse_proxy open-webui:8080
     }
     
     # Proxy vers n8n
-    handle_path /n8n* {
+    handle_path /n8n/* {
         reverse_proxy n8n:5678
     }
     
