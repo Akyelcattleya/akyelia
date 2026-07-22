@@ -1,43 +1,9 @@
 # ============================================
-# AI FACTORY - Caddy Configuration v2.0
-# ============================================
-# Sert le Smart Terminal (chat unique ChatGPT-like)
-# Proxifie les requêtes API vers le Smart Router
+# AI FACTORY - Caddy v2 Configuration
 # ============================================
 
 :80 {
     root * /srv
-    
-    # SMART TERMINAL — Le chat unique (page d'accueil)
-    try_files smart-terminal.html /smart-terminal.html
-    
-    # Fallback sur portal.html si smart-terminal n'existe pas
-    try_files portal.html
-    
     file_server
-    
-    # ============================================
-    # API — Proxy vers le Smart Router
-    # ============================================
-    handle_path /api/* {
-        reverse_proxy smart-router:8765
-    }
-    
-    # ============================================
-    # STATUT — Healthcheck
-    # ============================================
-    handle /status {
-        header Content-Type "application/json"
-        respond `{"status":"ok","version":"2.0","services":["openhands","webui","ollama","qdrant","n8n","browserless","smart-router"],"models":10}`
-    }
-    
-    # Headers
-    header {
-        X-Content-Type-Options "nosniff"
-        X-Frame-Options "SAMEORIGIN"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        -Server
-    }
-    
-    encode gzip zstd
+    try_files {path} /smart-terminal.html
 }
