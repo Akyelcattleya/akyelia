@@ -131,8 +131,7 @@ services:
     networks:
       - ai-factory-net
     depends_on:
-      qdrant:
-        condition: service_healthy
+      - qdrant
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.n8n.rule=Host(`n8n.votre-domaine.com`)"
@@ -161,8 +160,7 @@ services:
     networks:
       - ai-factory-net
     depends_on:
-      ollama:
-        condition: service_healthy
+      - ollama
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.webui.rule=Host(`chat.votre-domaine.com`)"
