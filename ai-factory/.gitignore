@@ -47,6 +47,8 @@ yarn-error.log*
 *.html
 !dashboard.html
 !index.html
+!smart-terminal.html
+!portal.html
 
 # Résultats de vision
 vision-results.json
