@@ -292,7 +292,7 @@ const STATE = {
   isStreaming: false,
   modelManual: 'auto',
   files: [],
-  webSearch: false
+  webSearch: true
 };
 
 // ============================================
@@ -322,6 +322,7 @@ function init() {
   loadModels();
   renderSkills();
   if (STATE.currentId) loadConversation(STATE.currentId);
+  toggleWebSearch();
 }
 init();
 
@@ -579,16 +580,24 @@ function renderMarkdown(text) {
   text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>');
   // Lists
   text = text.replace(/^- (.+)$/gm, '<li>$1</li>');
-  text = text.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+  text = text.replace(/(?:<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
   // Headers
   text = text.replace(/^### (.+)$/gm, '<h4>$1</h4>');
   text = text.replace(/^## (.+)$/gm, '<h3>$1</h3>');
   text = text.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-  // Paragraphs
-  text = text.replace(/\n\n/g, '</p><p>');
-  text = '<p>' + text + '</p>';
-  // Clean empty paragraphs
-  text = text.replace(/<p><\/p>/g, '');
+  // Lines starting with numbers (numbered lists)
+  text = text.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
+  // Split into paragraphs on double newlines
+  const paragraphs = text.split(/\n\n+/);
+  text = paragraphs.map(p => {
+    p = p.trim();
+    if (!p) return '';
+    // If already wrapped in block tags, don't wrap in <p>
+    if (/^<(pre|h[2-4]|ul|ol|li|div|table)/i.test(p)) return p;
+    // Convert single newlines to <br> within paragraphs
+    p = p.replace(/\n/g, '<br>');
+    return '<p>' + p + '</p>';
+  }).join('\n');
   return text;
 }
 
