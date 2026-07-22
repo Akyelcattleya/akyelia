@@ -222,7 +222,39 @@ services:
       - openhands
 
   # ==========================================
-  # 8. VISION - Analyse d'Images (Optionnel)
+  # 8. SMART ROUTER - Chat unique avec routage IA
+  # Choisit automatiquement le meilleur modèle
+  # pour chaque requête (code, chat, calcul...)
+  # ==========================================
+  smart-router:
+    build:
+      context: ./bridge
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        WORKDIR /app
+        RUN pip install fastapi uvicorn httpx
+        COPY smart-router.py /app/
+        EXPOSE 8765
+        CMD ["python", "smart-router.py"]
+    container_name: ai-factory-router
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - ROUTER_MODEL=phi4-mini:3.8b
+    depends_on:
+      - ollama
+    networks:
+      - ai-factory-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================
+  # 9. VISION - Analyse d'Images (Optionnel)
   # ComfyUI : Génération d'images et vision
   # Décommente si tu veux la génération d'images
   # ==========================================
