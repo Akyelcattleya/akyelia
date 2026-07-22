@@ -256,7 +256,6 @@ html,body{height:100%;font-family:'Inter',sans-serif;background:var(--bg);color:
         <div class="input-box">
           <textarea id="chatInput" placeholder="Pose ta question... (Shift+Enter = saut de ligne)" rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
           <div class="input-actions">
-            <button class="input-action-btn" id="webSearchBtn" onclick="toggleWebSearch()" title="Recherche web" style="font-size:1rem">🌐</button>
             <button class="input-action-btn" onclick="document.getElementById('fileInput').click()" title="Joindre un fichier">📎</button>
             <input type="file" id="fileInput" style="display:none" multiple onchange="handleFiles(this)">
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
@@ -296,6 +295,13 @@ const STATE = {
 };
 
 // ============================================
+// WEB SEARCH — Toujours actif, automatique
+// ============================================
+// La recherche web est intégrée automatiquement
+// pour toutes les questions qui en ont besoin.
+// Pas de bouton, pas de toggle — ça marche.
+
+// ============================================
 // SKILLS DATA
 // ============================================
 const SKILLS_DATA = [
@@ -322,7 +328,6 @@ function init() {
   loadModels();
   renderSkills();
   if (STATE.currentId) loadConversation(STATE.currentId);
-  toggleWebSearch();
 }
 init();
 
@@ -784,21 +789,6 @@ function selectModel(modelId, el) {
   document.getElementById('modelDropdown').classList.remove('show');
 }
 
-// WEB SEARCH TOGGLE
-function toggleWebSearch() {
-  STATE.webSearch = !STATE.webSearch;
-  const btn = document.getElementById('webSearchBtn');
-  if (STATE.webSearch) {
-    btn.style.background = 'rgba(108,92,231,0.2)';
-    btn.style.border = '1px solid rgba(108,92,231,0.3)';
-    btn.style.borderRadius = '8px';
-    showToast('🌐 Recherche web activée');
-  } else {
-    btn.style.background = 'transparent';
-    btn.style.border = 'none';
-    showToast('🌐 Recherche web désactivée');
-  }
-}
 // TOAST
 function showToast(msg) {
   const t = document.getElementById('toast');

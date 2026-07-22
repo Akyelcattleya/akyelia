@@ -3,12 +3,14 @@
 # ============================================
 
 :80 {
-    root * /srv
-    file_server
-    try_files {path} /smart-terminal.html
-
-    # API Proxy vers Smart Router (sans couper le préfixe /api)
-    handle /api/* {
-        reverse_proxy smart-router:8765
+    # D'abord les requêtes API → Smart Router
+    @api {
+        path /api*
     }
+    reverse_proxy @api smart-router:8765
+
+    # Ensuite les fichiers statiques
+    root * /srv
+    try_files {path} /smart-terminal.html
+    file_server
 }
