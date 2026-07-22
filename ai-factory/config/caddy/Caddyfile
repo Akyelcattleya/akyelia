@@ -6,4 +6,9 @@
     root * /srv
     file_server
     try_files {path} /smart-terminal.html
+
+    # API Proxy vers Smart Router (sans couper le préfixe /api)
+    handle /api/* {
+        reverse_proxy smart-router:8765
+    }
 }
