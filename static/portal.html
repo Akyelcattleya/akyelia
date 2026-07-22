@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏭 AI Factory - Portail</title>
+<style>
+/* ============================================
+   AI FACTORY - PORTAL
+   Design : Dark mode, Glassmorphism, Motion Design
+   ============================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+    --bg-primary: #0a0b1a;
+    --bg-secondary: #0f1130;
+    --bg-card: rgba(15, 17, 48, 0.8);
+    --glass: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --text-primary: #e8eaf0;
+    --text-secondary: #8b8fa3;
+    --accent-1: #6c5ce7;
+    --accent-2: #00cec9;
+    --accent-3: #fd79a8;
+    --accent-4: #fdcb6e;
+    --gradient-1: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    --gradient-2: linear-gradient(135deg, #00cec9, #55efc4);
+    --gradient-3: linear-gradient(135deg, #fd79a8, #e84393);
+    --gradient-main: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 25%, #00cec9 50%, #55efc4 75%, #fdcb6e 100%);
+    --shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* ============================================
+   PARTICLES CANVAS
+   ============================================ */
+#particles-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ============================================
+   CURSOR GLOW
+   ============================================ */
+.cursor-glow {
+    position: fixed;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(108, 92, 231, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 0;
+    transition: left 0.15s ease, top 0.15s ease;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+header {
+    position: relative;
+    z-index: 10;
+    padding: 2rem 2rem 0;
+    text-align: center;
+}
+
+.glow-text {
+    font-size: 4rem;
+    font-weight: 900;
+    background: var(--gradient-main);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 6s ease-in-out infinite;
+    letter-spacing: -2px;
+    position: relative;
+    display: inline-block;
+}
+
+.glow-text::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120%;
+    height: 120%;
+    background: radial-gradient(circle, rgba(108, 92, 231, 0.2) 0%, transparent 60%);
+    z-index: -1;
+    animation: pulseGlow 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+@keyframes pulseGlow {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.subtitle {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #00cec9;
+    animation: statusPulse 2s ease-in-out infinite;
+    box-shadow: 0 0 10px rgba(0, 206, 201, 0.5);
+}
+
+@keyframes statusPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(0, 206, 201, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(0, 206, 201, 0.8); }
+}
+
+/* ============================================
+   TABS
+   ============================================ */
+.tabs-container {
+    position: relative;
+    z-index: 10;
+    max-width: 1400px;
+    margin: 2rem auto 0;
+    padding: 0 1.5rem;
+}
+
+.tabs-nav {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.tabs-nav::-webkit-scrollbar { display: none; }
+
+.tab-btn {
+    flex-shrink: 0;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+    background: rgba(108, 92, 231, 0.2);
+    color: #a29bfe;
+    box-shadow: 0 0 20px rgba(108, 92, 231, 0.1);
+}
+
+.tab-btn .tab-icon {
+    font-size: 1.2rem;
+}
+
+/* ============================================
+   TAB CONTENT
+   ============================================ */
+.tab-content {
+    display: none;
+    margin-top: 1.5rem;
+    animation: fadeSlideUp 0.5s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   IFRAME CARDS
+   ============================================ */
+.iframe-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+.iframe-card {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.iframe-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: rgba(108, 92, 231, 0.3);
+}
+
+.iframe-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.iframe-card-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.iframe-card-status {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    background: rgba(0, 206, 201, 0.1);
+    color: #00cec9;
+}
+
+.iframe-card iframe {
+    width: 100%;
+    border: none;
+    background: var(--bg-primary);
+}
+
+/* ============================================
+   SERVICES GRID (Dashboard Tab)
+   ============================================ */
+.services-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.service-card {
+    padding: 1.5rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.service-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--gradient-main);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.service-card:hover::before { opacity: 1; }
+
+.service-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow);
+}
+
+.service-card-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.service-card-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.service-card-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+
+.service-card-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    width: fit-content;
+}
+
+.status-online {
+    background: rgba(0, 206, 201, 0.1);
+    color: #00cec9;
+}
+
+.status-offline {
+    background: rgba(255, 118, 117, 0.1);
+    color: #ff7675;
+}
+
+.status-loading {
+    background: rgba(253, 203, 110, 0.1);
+    color: #fdcb6e;
+}
+
+/* ============================================
+   SKILLS TAB
+   ============================================ */
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.skill-card {
+    padding: 1.25rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    transition: all 0.3s ease;
+}
+
+.skill-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(108, 92, 231, 0.3);
+}
+
+.skill-card-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.skill-card-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.skill-card-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* ============================================
+   QUICK CMDS
+   ============================================ */
+.cmd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.cmd-btn {
+    padding: 1rem;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+}
+
+.cmd-btn:hover {
+    background: rgba(108, 92, 231, 0.15);
+    border-color: rgba(108, 92, 231, 0.3);
+    transform: translateY(-2px);
+}
+
+.cmd-btn-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.4rem;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+    .glow-text { font-size: 2.5rem; }
+    .tabs-nav { padding: 0.4rem; gap: 0.3rem; }
+    .tab-btn { padding: 0.5rem 1rem; font-size: 0.8rem; }
+    .services-grid { grid-template-columns: 1fr; }
+    .skills-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+    .glow-text { font-size: 1.8rem; }
+    .skills-grid { grid-template-columns: 1fr; }
+}
+
+/* ============================================
+   SCROLLBAR
+   ============================================ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: rgba(108, 92, 231, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(108, 92, 231, 0.5); }
+</style>
+</head>
+<body>
+
+<div id="particles-canvas"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- ============================================
+     HEADER
+     ============================================ -->
+<header>
+    <h1 class="glow-text">🏭 AI FACTORY</h1>
+    <p class="subtitle">Usine à Agents Autonomes · Propulsé par Qwen3</p>
+    <div class="status-bar">
+        <span class="status-dot"></span>
+        <span id="globalStatus">Tous les systèmes opérationnels</span>
+        <span style="color:var(--text-secondary)">·</span>
+        <span id="servicesCount">0/7 en ligne</span>
+    </div>
+</header>
+
+<!-- ============================================
+     TABS NAVIGATION
+     ============================================ -->
+<div class="tabs-container">
+    <nav class="tabs-nav" id="tabsNav">
+        <button class="tab-btn active" data-tab="dashboard">
+            <span class="tab-icon">📊</span> Dashboard
+        </button>
+        <button class="tab-btn" data-tab="openhands">
+            <span class="tab-icon">🤖</span> OpenHands
+        </button>
+        <button class="tab-btn" data-tab="chat">
+            <span class="tab-icon">💬</span> Chat IA
+        </button>
+        <button class="tab-btn" data-tab="services">
+            <span class="tab-icon">⚡</span> Services
+        </button>
+        <button class="tab-btn" data-tab="skills">
+            <span class="tab-icon">🧠</span> Skills
+        </button>
+        <button class="tab-btn" data-tab="terminal">
+            <span class="tab-icon">💻</span> Terminal
+        </button>
+        <button class="tab-btn" data-tab="about">
+            <span class="tab-icon">🎯</span> À propos
+        </button>
+    </nav>
+
+    <!-- ============================================
+         TAB: DASHBOARD
+         ============================================ -->
+    <div class="tab-content active" id="tab-dashboard">
+        <div class="services-grid" id="servicesGrid">
+            <div class="service-card">
+                <div class="service-card-icon">🤖</div>
+                <div class="service-card-name">OpenHands</div>
+                <div class="service-card-desc">Agent Architecte</div>
+                <div class="service-card-status status-loading" data-service="openhands">⟳ Vérification...</div>
+                <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary)">:3000</div>
+            </div>
+            <div class="service-card">
+                <div class="service-card-icon">💬</div>
+                <div class="service-card-name">Open WebUI</div>
+                <div class="service-card-desc">Chat IA privé</div>
+                <div class="service-card-status status-loading" data-service="webui">⟳ Vérification...</div>
+                <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary)">:3001</div>
+            </div>
+            <div class="service-card">
+                <div class="service-card-icon">🧠</div>
+                <div class="service-card-name">Ollama</div>
+                <div class="service-card-desc">Moteur LLM local</div>
+                <div class="service-card-status status-loading" data-service="ollama">⟳ Vérification...</div>
+                <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary)">:11434</div>
+            </div>
+            <div class="service-card">
+                <div class="service-card-icon">⚡</div>
+                <div class="service-card-name">n8n</div>
+                <div class="service-card-desc">Automatisation workflows</div>
+                <div class="service-card-status status-loading" data-service="n8n">⟳ Vérification...</div>
+                <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary)">:5678</div>
+            </div>
+            <div class="service-card">
+                <div class="service-card-icon">💾</div>
+                <div class="service-card-name">Qdrant</div>
+                <div class="service-card-desc">Base vectorielle</div>
+                <div class="service-card-status status-loading" data-service="qdrant">⟳ Vérification...</div>
+                <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary)">:6333</div>
+            </div>
+            <div class="service-card">
+                <div class="service-card-icon">🌐</div>
+                <div class="service-card-name">Browserless</div>
+                <div class="service-card-desc">Navigateur headless</div>
+                <div class="service-card-status status-loading" data-service="browserless">⟳ Vérification...</div>
+                <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary)">:3002</div>
+            </div>
+            <div class="service-card">
+                <div class="service-card-icon">🔒</div>
+                <div class="service-card-name">Caddy</div>
+                <div class="service-card-desc">Reverse proxy</div>
+                <div class="service-card-status status-loading" data-service="caddy">⟳ Vérification...</div>
+                <div style="margin-top:0.75rem;font-size:0.8rem;color:var(--text-secondary)">:80/443</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         TAB: OPENHANDS
+         ============================================ -->
+    <div class="tab-content" id="tab-openhands">
+        <div class="iframe-grid">
+            <div class="iframe-card">
+                <div class="iframe-card-header">
+                    <span class="iframe-card-title">🤖 OpenHands — Agent Architecte</span>
+                    <span class="iframe-card-status">🟢 En ligne</span>
+                </div>
+                <iframe src="http://148.230.98.203:3000" height="700" title="OpenHands"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         TAB: CHAT
+         ============================================ -->
+    <div class="tab-content" id="tab-chat">
+        <div class="iframe-grid">
+            <div class="iframe-card">
+                <div class="iframe-card-header">
+                    <span class="iframe-card-title">💬 Open WebUI — Chat avec Qwen3</span>
+                    <span class="iframe-card-status">🟢 En ligne</span>
+                </div>
+                <iframe src="http://148.230.98.203:3001" height="700" title="Open WebUI"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         TAB: SERVICES
+         ============================================ -->
+    <div class="tab-content" id="tab-services">
+        <div class="services-grid">
+            <a class="service-card" href="http://148.230.98.203:3000" target="_blank" style="text-decoration:none;color:inherit">
+                <div class="service-card-icon">🤖</div>
+                <div class="service-card-name">OpenHands</div>
+                <div class="service-card-desc">Agent IA qui code et déploie</div>
+                <div style="font-size:0.8rem;color:var(--accent-1);margin-top:0.5rem">:3000 ↗</div>
+            </a>
+            <a class="service-card" href="http://148.230.98.203:3001" target="_blank" style="text-decoration:none;color:inherit">
+                <div class="service-card-icon">💬</div>
+                <div class="service-card-name">Open WebUI</div>
+                <div class="service-card-desc">Chat avec Qwen3 local</div>
+                <div style="font-size:0.8rem;color:var(--accent-2);margin-top:0.5rem">:3001 ↗</div>
+            </a>
+            <a class="service-card" href="http://148.230.98.203:5678" target="_blank" style="text-decoration:none;color:inherit">
+                <div class="service-card-icon">⚡</div>
+                <div class="service-card-name">n8n</div>
+                <div class="service-card-desc">Workflows automatisés</div>
+                <div style="font-size:0.8rem;color:var(--accent-3);margin-top:0.5rem">:5678 ↗</div>
+            </a>
+            <a class="service-card" href="http://148.230.98.203:3002" target="_blank" style="text-decoration:none;color:inherit">
+                <div class="service-card-icon">🌐</div>
+                <div class="service-card-name">Browserless</div>
+                <div class="service-card-desc">Navigation automatisée</div>
+                <div style="font-size:0.8rem;color:var(--accent-4);margin-top:0.5rem">:3002 ↗</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- ============================================
+         TAB: SKILLS
+         ============================================ -->
+    <div class="tab-content" id="tab-skills">
+        <div class="skills-grid">
+            <div class="skill-card">
+                <div class="skill-card-icon">🤖</div>
+                <div class="skill-card-name">Bot Generator</div>
+                <div class="skill-card-desc">Crée des bots furtifs sur une phrase</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">📥</div>
+                <div class="skill-card-name">GitHub Ingester</div>
+                <div class="skill-card-desc">Aspire n'importe quel dépôt GitHub</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">👁️</div>
+                <div class="skill-card-name">Vision Skill</div>
+                <div class="skill-card-desc">Analyse d'images avec LLaVA</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">🌐</div>
+                <div class="skill-card-name">Website Forge</div>
+                <div class="skill-card-desc">Génère des sites en 5 minutes</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">📊</div>
+                <div class="skill-card-name">System Monitor</div>
+                <div class="skill-card-desc">Dashboard de santé temps réel</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">🩺</div>
+                <div class="skill-card-name">Self-Healing</div>
+                <div class="skill-card-desc">Auto-guérison des bots</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">📈</div>
+                <div class="skill-card-name">Marketing Agent</div>
+                <div class="skill-card-desc">Agence marketing automatisée</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">🔌</div>
+                <div class="skill-card-name">MCP Server</div>
+                <div class="skill-card-desc">22 outils pour l'IA</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">🎯</div>
+                <div class="skill-card-name">Prospecting Engine</div>
+                <div class="skill-card-desc">Prospection LinkedIn/Instagram</div>
+            </div>
+            <div class="skill-card">
+                <div class="skill-card-icon">🛡️</div>
+                <div class="skill-card-name">Stealth Module</div>
+                <div class="skill-card-desc">Template Playwright anti-détection</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         TAB: TERMINAL
+         ============================================ -->
+    <div class="tab-content" id="tab-terminal">
+        <div class="cmd-grid">
+            <div class="cmd-btn" onclick="copyCmd('cd /opt/ai-factory && docker compose ps')">
+                <div class="cmd-btn-icon">📊</div>
+                docker compose ps
+            </div>
+            <div class="cmd-btn" onclick="copyCmd('cd /opt/ai-factory && docker compose logs -f')">
+                <div class="cmd-btn-icon">📋</div>
+                docker compose logs
+            </div>
+            <div class="cmd-btn" onclick="copyCmd('cd /opt/ai-factory && docker compose exec ollama ollama list')">
+                <div class="cmd-btn-icon">🧠</div>
+                ollama list
+            </div>
+            <div class="cmd-btn" onclick="copyCmd('cd /opt/ai-factory && docker compose down && docker compose up -d')">
+                <div class="cmd-btn-icon">🔄</div>
+                Redémarrer tout
+            </div>
+            <div class="cmd-btn" onclick="copyCmd('cd /opt/ai-factory && docker compose exec ollama ollama pull qwen3:8b')">
+                <div class="cmd-btn-icon">📦</div>
+                Installer modèle
+            </div>
+            <div class="cmd-btn" onclick="copyCmd('cd /opt/ai-factory && docker compose logs --tail 50')">
+                <div class="cmd-btn-icon">🔍</div>
+              Dernières logs
+          </div>
+        </div>
+        <div style="margin-top:1.5rem;padding:1rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text-secondary);line-height:1.6">
+            <div style="color:var(--accent-2);margin-bottom:0.5rem"># Commandes rapides pour la console Hostinger :</div>
+            <div>→ Clique sur une commande ci-dessus pour la copier</div>
+            <div>→ Colle-la dans ta console Hostinger (Ctrl+Shift+V ou clic droit)</div>
+        </div>
+    </div>
+
+    <!-- ============================================
+         TAB: ABOUT
+         ============================================ -->
+    <div class="tab-content" id="tab-about">
+        <div style="padding:2rem;background:var(--glass);border:1px solid var(--glass-border);border-radius:16px;backdrop-filter:blur(20px);max-width:600px;margin:0 auto">
+            <div style="font-size:3rem;text-align:center;margin-bottom:1rem">🏭</div>
+            <h2 style="text-align:center;font-size:1.5rem;margin-bottom:0.5rem;background:var(--gradient-main);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">AI Factory</h2>
+            <div style="text-align:center;color:var(--text-secondary);margin-bottom:1.5rem">v1.0 · Usine à Agents Autonomes</div>
+            <div style="color:var(--text-secondary);line-height:1.8;font-size:0.9rem">
+                <p><strong style="color:var(--text-primary)">🧠 Moteur :</strong> Qwen3 via Ollama (local, gratuit, illimité)</p>
+                <p><strong style="color:var(--text-primary)">🤖 Agent :</strong> OpenHands — code et déploie pour toi</p>
+                <p><strong style="color:var(--text-primary)">💬 Chat :</strong> Open WebUI — interface ChatGPT privée</p>
+                <p><strong style="color:var(--text-primary)">⚡ Automatisation :</strong> n8n — workflows visuels</p>
+                <p><strong style="color:var(--text-primary)">💾 Mémoire :</strong> Qdrant — base vectorielle (RAG)</p>
+                <p><strong style="color:var(--text-primary)">🌐 Bots :</strong> Browserless — navigation headless</p>
+                <p><strong style="color:var(--text-primary)">🧠 Skills :</strong> 10 modules d'IA spécialisés</p>
+            </div>
+            <div style="margin-top:1.5rem;padding:1rem;background:rgba(0,0,0,0.2);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--accent-2);text-align:center">
+                IP: 148.230.98.203 · Hostinger · 7 services actifs
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================
+     JAVASCRIPT
+     ============================================ -->
+<script>
+// ============================================
+// PARTICLES
+// ============================================
+(function() {
+    const canvas = document.getElementById('particles-canvas');
+    const ctx = canvas.getContext('2d');
+    let w, h, particles = [];
+
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = document.documentElement.scrollHeight || window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const colors = ['6c5ce7', 'a29bfe', '00cec9', '55efc4', 'fd79a8'];
+
+    class Particle {
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * w;
+            this.y = Math.random() * h;
+            this.size = Math.random() * 2 + 0.5;
+            this.speedX = (Math.random() - 0.5) * 0.5;
+            this.speedY = (Math.random() - 0.5) * 0.5;
+            this.color = colors[Math.floor(Math.random() * colors.length)];
+            this.opacity = Math.random() * 0.5 + 0.1;
+        }
+        update() {
+            this.x += this.speedX;
+            this.y += this.speedY;
+            if (this.x < 0 || this.x > w) this.reset();
+            if (this.y < 0 || this.y > h) this.reset();
+        }
+        draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = `#${this.color}`;
+            ctx.globalAlpha = this.opacity;
+            ctx.fill();
+        }
+    }
+
+    for (let i = 0; i < 80; i++) particles.push(new Particle());
+
+    let mouseX = w/2, mouseY = h/2;
+    document.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+
+    function animate() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+            p.update();
+            p.draw();
+        });
+
+        // Draw connections
+        for (let i = 0; i < particles.length; i++) {
+            for (let j = i + 1; j < particles.length; j++) {
+                const dx = particles[i].x - particles[j].x;
+                const dy = particles[i].y - particles[j].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 150) {
+                    ctx.beginPath();
+                    ctx.moveTo(particles[i].x, particles[i].y);
+                    ctx.lineTo(particles[j].x, particles[j].y);
+                    ctx.strokeStyle = `rgba(108, 92, 231, ${0.1 * (1 - dist / 150)})`;
+                    ctx.stroke();
+                }
+            }
+        }
+
+        // Connection to mouse
+        particles.forEach(p => {
+            const dx = p.x - mouseX;
+            const dy = p.y - mouseY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 200) {
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(mouseX, mouseY);
+                ctx.strokeStyle = `rgba(162, 155, 254, ${0.15 * (1 - dist / 200)})`;
+                ctx.stroke();
+            }
+        });
+
+        requestAnimationFrame(animate);
+    }
+    animate();
+})();
+
+// ============================================
+// CURSOR GLOW
+// ============================================
+const cursorGlow = document.getElementById('cursorGlow');
+document.addEventListener('mousemove', e => {
+    cursorGlow.style.left = e.clientX + 'px';
+    cursorGlow.style.top = e.clientY + 'px';
+});
+
+// ============================================
+// TABS
+// ============================================
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+        const tabId = btn.dataset.tab;
+        tabBtns.forEach(b => b.classList.remove('active'));
+        tabContents.forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + tabId).classList.add('active');
+    });
+});
+
+// ============================================
+// SERVICE STATUS CHECK
+// ============================================
+async function checkServices() {
+    const services = {
+        openhands: { url: 'http://148.230.98.203:3000', name: 'OpenHands' },
+        webui: { url: 'http://148.230.98.203:3001', name: 'Open WebUI' },
+        ollama: { url: 'http://148.230.98.203:11434/api/tags', name: 'Ollama' },
+        n8n: { url: 'http://148.230.98.203:5678', name: 'n8n' },
+        qdrant: { url: 'http://148.230.98.203:6333', name: 'Qdrant' },
+        browserless: { url: 'http://148.230.98.203:3002', name: 'Browserless' },
+        caddy: { url: 'http://148.230.98.203:80', name: 'Caddy' }
+    };
+
+    const statusEls = document.querySelectorAll('[data-service]');
+    let onlineCount = 0;
+
+    for (const [key, svc] of Object.entries(services)) {
+        const el = document.querySelector(`[data-service="${key}"]`);
+        try {
+            const resp = await fetch(svc.url, { mode: 'no-cors', method: 'HEAD' });
+            // Avec no-cors, on suppose que ça répond
+            if (el) {
+                el.textContent = '🟢 En ligne';
+                el.className = 'service-card-status status-online';
+            }
+            onlineCount++;
+        } catch(e) {
+            // Si le mode no-cors échoue, on tente en mode normal
+            try {
+                const resp2 = await fetch(svc.url, { method: 'HEAD' });
+                if (el) {
+                    el.textContent = '🟢 En ligne';
+                    el.className = 'service-card-status status-online';
+                }
+                onlineCount++;
+            } catch(e2) {
+                if (el) {
+                    el.textContent = '🔴 Hors ligne';
+                    el.className = 'service-card-status status-offline';
+                }
+            }
+        }
+    }
+
+    document.getElementById('servicesCount').textContent = `${onlineCount}/7 en ligne`;
+    if (onlineCount === 7) {
+        document.getElementById('globalStatus').textContent = '✅ Tous les systèmes opérationnels';
+    } else if (onlineCount > 0) {
+        document.getElementById('globalStatus').textContent = `⚠️ ${onlineCount}/7 services en ligne`;
+    } else {
+        document.getElementById('globalStatus').textContent = '❌ Aucun service détecté';
+    }
+}
+
+// Vérifier les services au chargement et toutes les 30s
+checkServices();
+setInterval(checkServices, 30000);
+
+// ============================================
+// COPY COMMAND
+// ============================================
+function copyCmd(cmd) {
+    navigator.clipboard.writeText(cmd).then(() => {
+        const btn = event.target.closest('.cmd-btn');
+        const original = btn.textContent;
+        btn.textContent = '✅ Copié !';
+        setTimeout(() => { btn.textContent = original; }, 1500);
+    });
+}
+</script>
+</body>
+</html>

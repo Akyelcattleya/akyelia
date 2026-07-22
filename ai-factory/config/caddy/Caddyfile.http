@@ -1,0 +1,29 @@
+# ============================================
+# AI FACTORY - Caddy HTTP Mode (sans domaine)
+# Sert le portail HTML sur le port 80
+# ============================================
+# Utilisation : docker compose cp ce fichier
+# comme Caddyfile et redémarrer Caddy
+# ============================================
+
+{
+    # Stockage des certificats
+    storage file /data
+}
+
+:80 {
+    root * /srv
+    file_server
+
+    handle_path /openhands* {
+        reverse_proxy openhands:3000
+    }
+
+    handle_path /chat* {
+        reverse_proxy open-webui:8080
+    }
+
+    handle_path /n8n* {
+        reverse_proxy n8n:5678
+    }
+}
