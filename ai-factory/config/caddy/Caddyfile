@@ -5,10 +5,6 @@
 # Ajoute un nom de domaine pour le SSL auto
 # ============================================
 
-{
-    storage file /data
-}
-
 :80 {
     root * /srv
     
