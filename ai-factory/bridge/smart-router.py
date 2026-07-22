@@ -1,410 +1,633 @@
 #!/usr/bin/env python3
 """
-============================================
-AI FACTORY - Smart Router
-============================================
-Chat unique qui choisit automatiquement le
-meilleur modèle pour chaque requête.
-
-Architecture :
-  Requête → Classifieur (phi4-mini / 1s) 
-         → Routage vers le meilleur modèle
-         → Réponse streamée
-
-Modèles disponibles :
-  💻 qwen2.5-coder:7b   → Code, debug, architecture
-  ⚡ phi4-mini:3.8b      → Raisonnement rapide
-  🎯 gemma4:4b          → Général polyvalent
-  💬 llama3.2:3b         → Chat, créativité
-  🧠 deepseek-r1:7b     → Problèmes complexes
-============================================
+╔══════════════════════════════════════════════════════════════╗
+║           AI FACTORY - SMART ROUTER v2.0 (MUSK MODE)       ║
+║  Le chat unique qui choisit le meilleur modèle pour toi    ║
+║  Analyse → Route → Génère → Livre en moins d'1 seconde    ║
+╚══════════════════════════════════════════════════════════════╝
 """
 
-import json
-import os
+import os, json, asyncio, re, time, html
+from urllib.parse import quote
 import httpx
-import asyncio
 from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse, HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 
-app = FastAPI(title="AI Factory - Smart Router")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+# ============================================
+# CONFIGURATION
+# ============================================
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 ROUTER_MODEL = os.getenv("ROUTER_MODEL", "phi4-mini:3.8b")
+PORT = int(os.getenv("PORT", "8765"))
 
-# ============================================
-# Configuration du routage intelligent
-# Chaque modèle avec ses spécialités
-# ============================================
-MODEL_ROUTES = {
-    "💻 qwen2.5-coder:7b": {
-        "keywords": ["code", "programmation", "python", "javascript", "react", "docker", "git", 
-                    "bug", "débug", "algorithme", "fonction", "api", "backend", "frontend",
-                    "html", "css", "typescript", "node", "sql", "base de données"],
-        "priority": 1,
-        "strength": "code"
+# Tous les modèles disponibles avec leurs specs
+MODELS = {
+    "qwen2.5-coder:7b": {
+        "name": "Qwen 2.5 Coder 7B",
+        "emoji": "💻",
+        "color": "#3b82f6",
+        "specialty": "Code & Programmation",
+        "speed": "Moyen",
+        "size": "4.7GB",
+        "best_for": ["code", "programmation", "python", "javascript", "algorithme", "debug", "api", "script", "sql", "react", "docker", "git", "terminal", "function", "classe", "bug", "compiler", "framework"],
+        "quality": 9
     },
-    "⚡ phi4-mini:3.8b": {
-        "keywords": ["raisonne", "logique", "analyse", "math", "équation", "calcul",
-                    "scientifique", "physique", "explique", "pourquoi", "comment",
-                    "problème", "solution", "prouve", "démontre"],
-        "priority": 2,
-        "strength": "reasoning"
+    "phi4-mini:3.8b": {
+        "name": "Phi-4 Mini 3.8B",
+        "emoji": "⚡",
+        "color": "#a855f7",
+        "specialty": "Raisonnement & Logique",
+        "speed": "Très rapide",
+        "size": "2.5GB",
+        "best_for": ["raisonnement", "logique", "math", "science", "analyse", "réflexion", "puzzle", "calcul", "problème", "stratégie", "planification", "décision"],
+        "quality": 8
     },
-    "🧠 deepseek-r1:7b": {
-        "keywords": ["stratégie", "architecture", "plan", "conception", "design pattern",
-                    "complexe", "système", "optimisation", "performance", "sécurité",
-                    "réfléchis", "analyse approfondie", "comparaison"],
-        "priority": 3,
-        "strength": "deep"
+    "qwen3.5:4b": {
+        "name": "Qwen 3.5 4B",
+        "emoji": "🧠",
+        "color": "#06b6d4",
+        "specialty": "Polyvalent & Général",
+        "speed": "Rapide",
+        "size": "3.4GB",
+        "best_for": ["général", "conseil", "explication", "résumé", "traduction", "rédaction", "email", "lettre", "article", "blog", "documentation", "rapport"],
+        "quality": 8
     },
-    "🎯 gemma4:4b": {
-        "keywords": ["traduis", "résume", "explique simplement", "vulgarise",
-                    "conseil", "recommandation", "comparatif", "avis",
-                    "général", "culture", "histoire", "géographie"],
-        "priority": 4,
-        "strength": "general"
+    "llama3.2:3b": {
+        "name": "Llama 3.2 3B",
+        "emoji": "🦙",
+        "color": "#22c55e",
+        "specialty": "Chat & Créativité",
+        "speed": "Très rapide",
+        "size": "2GB",
+        "best_for": ["chat", "conversation", "créatif", "histoire", "poème", "blague", "idée", "brainstorming", "écriture", "storytelling", "humour", "philosophie"],
+        "quality": 7
     },
-    "💬 llama3.2:3b": {
-        "keywords": ["écris", "rédige", "poème", "histoire", "créatif",
-                    "blague", "humour", "inspiration", "idée", "brainstorming",
-                    "conversation", "discussion", "avis personnel"],
-        "priority": 5,
-        "strength": "creative"
+    "gemma2:2b": {
+        "name": "Gemma 2 2B",
+        "emoji": "🌐",
+        "color": "#ec4899",
+        "specialty": "Multilingue & Traduction",
+        "speed": "Ultra rapide",
+        "size": "1.5GB",
+        "best_for": ["traduction", "multilingue", "anglais", "français", "espagnol", "grammaire", "orthographe", "vocabulaire", "langue"],
+        "quality": 7
+    },
+    "deepseek-r1:7b": {
+        "name": "DeepSeek R1 7B",
+        "emoji": "🔬",
+        "color": "#f59e0b",
+        "specialty": "Recherche & Deep Dive",
+        "speed": "Lent",
+        "size": "4.5GB",
+        "best_for": ["recherche", "deep", "technique", "avancé", "analyse approfondie", "thèse", "académique", "complexe", "scientifique"],
+        "quality": 10
+    },
+    "nomic-embed-text": {
+        "name": "Nomic Embed Text",
+        "emoji": "📐",
+        "color": "#6366f1",
+        "specialty": "Embeddings & RAG",
+        "speed": "Instantané",
+        "size": "0.3GB",
+        "best_for": ["embedding", "vecteur", "recherche sémantique", "similarité"],
+        "quality": 7
     }
 }
 
+app = FastAPI(title="AI Factory Smart Router")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# Cache pour les modèles disponibles sur Ollama
+available_models_cache = []
+cache_time = 0
+
+async def get_available_models():
+    global available_models_cache, cache_time
+    now = time.time()
+    if now - cache_time < 30 and available_models_cache:
+        return available_models_cache
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            r = await client.get(f"{OLLAMA_URL}/api/tags")
+            if r.status_code == 200:
+                data = r.json()
+                available = [m["name"] for m in data.get("models", [])]
+                available_models_cache = available
+                cache_time = now
+                return available
+    except:
+        pass
+    return available_models_cache
+
+async def analyze_query(query: str) -> dict:
+    """Analyse la requête pour déterminer le meilleur modèle"""
+    q = query.lower()
+    
+    scores = {}
+    for model_id, info in MODELS.items():
+        score = 0
+        for kw in info["best_for"]:
+            if kw in q:
+                score += 2
+        # Bonus pour la longueur
+        if len(query) > 200 and model_id == "deepseek-r1:7b":
+            score += 3
+        if len(query) < 100 and model_id in ["phi4-mini:3.8b", "llama3.2:3b"]:
+            score += 1
+        # Code-related keywords
+        code_words = ["code", "python", "javascript", "function", "api", "bug", "git", "docker", "html", "css", "react", "sql"]
+        if any(w in q for w in code_words):
+            if model_id == "qwen2.5-coder:7b":
+                score += 5
+        # Deep/reasoning
+        if any(w in q for w in ["pourquoi", "comment", "explique", "analyse", "compare", "différence"]):
+            if model_id == "phi4-mini:3.8b":
+                score += 3
+            if model_id == "deepseek-r1:7b":
+                score += 2
+        scores[model_id] = score
+    
+    # Sélectionner le meilleur modèle disponible
+    available = await get_available_models()
+    best = max(scores, key=scores.get)
+    
+    # Si le modèle choisi n'est pas disponible, prendre le meilleur dispo
+    if best not in available and best != "nomic-embed-text":
+        for model_id in sorted(scores, key=scores.get, reverse=True):
+            if model_id in available:
+                best = model_id
+                break
+    
+    return {
+        "model": best,
+        "model_info": MODELS.get(best, {}),
+        "confidence": min(100, scores.get(best, 0) * 10 + 50),
+        "all_scores": {m: s for m, s in sorted(scores.items(), key=lambda x: x[1], reverse=True)}
+    }
+
+async def generate_response(query: str, model: str):
+    """Génère la réponse via Ollama"""
+    try:
+        async with httpx.AsyncClient(timeout=120) as client:
+            prompt = f"""Tu es un assistant IA expert, utile et précis. 
+Réponds à la question suivante de façon claire, structurée et complète.
+
+Question: {query}
+
+Réponse:"""
+            payload = {
+                "model": model,
+                "prompt": prompt,
+                "stream": True,
+                "options": {
+                    "temperature": 0.7,
+                    "top_p": 0.9,
+                    "num_ctx": 4096
+                }
+            }
+            async with client.stream("POST", f"{OLLAMA_URL}/api/generate", json=payload, timeout=120) as resp:
+                async for line in resp.aiter_lines():
+                    if line:
+                        try:
+                            data = json.loads(line)
+                            if "response" in data:
+                                yield data["response"]
+                            if data.get("done"):
+                                break
+                        except:
+                            continue
+    except Exception as e:
+        yield f"\n\n❌ Erreur: {str(e)}"
+
 # ============================================
-# Interface HTML du chat unique
+# PAGE HTML PRINCIPALE - Interface Musk-level
 # ============================================
-HTML_PAGE = """
-<!DOCTYPE html>
+
+HTML_PAGE = """<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>🧠 AI Factory - Smart Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Factory — Smart Router</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',sans-serif;background:#0a0b1a;color:#e2e8f0;height:100vh;display:flex;flex-direction:column}
-.header{background:rgba(15,17,48,0.9);border-bottom:1px solid rgba(255,255,255,0.1);padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(10px)}
-.header h1{font-size:1.1rem;font-weight:600;background:linear-gradient(135deg,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.model-badge{font-size:0.75rem;padding:0.25rem 0.75rem;border-radius:20px;background:rgba(108,92,231,0.15);color:#a29bfe;display:none}
-.model-badge.visible{display:inline-flex;align-items:center;gap:0.4rem}
-.chat-container{flex:1;overflow-y:auto;padding:1.5rem 2rem;display:flex;flex-direction:column;gap:1rem}
-.message{max-width:80%;padding:1rem 1.25rem;border-radius:16px;animation:fadeIn 0.3s ease;line-height:1.6;font-size:0.9rem}
-.message.user{background:rgba(108,92,231,0.15);align-self:flex-end;border-bottom-right-radius:4px}
-.message.assistant{background:rgba(255,255,255,0.05);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid rgba(255,255,255,0.05)}
-.message .model-tag{font-size:0.7rem;color:#00cec9;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.4rem}
-.message .model-tag.thinking{color:#fdcb6e}
-.message .model-tag.code{color:#6c5ce7}
-.message .model-tag.creative{color:#fd79a8}
-.message .model-tag.reasoning{color:#00cec9}
-.typing{display:flex;gap:4px;padding:0.5rem 0}
-.typing span{width:8px;height:8px;background:#6c5ce7;border-radius:50%;animation:bounce 1.4s infinite ease-in-out}
-.typing span:nth-child(2){animation-delay:0.2s}
-.typing span:nth-child(3){animation-delay:0.4s}
-@keyframes bounce{0%,80%,100%{transform:scale(0.6)}40%{transform:scale(1)}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.input-area{background:rgba(15,17,48,0.9);border-top:1px solid rgba(255,255,255,0.1);padding:1rem 2rem}
-.input-wrapper{display:flex;gap:0.75rem;align-items:center;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:0.5rem 1rem;transition:border-color 0.3s}
-.input-wrapper:focus-within{border-color:#6c5ce7}
-.input-wrapper input{flex:1;background:none;border:none;color:#e2e8f0;font-size:0.95rem;outline:none;padding:0.25rem 0;font-family:'Inter',sans-serif}
-.input-wrapper input::placeholder{color:#4a5568}
-.send-btn{background:#6c5ce7;border:none;color:white;width:36px;height:36px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.3s;font-size:1.1rem}
-.send-btn:hover{background:#5a4bd1;transform:scale(1.05)}
-.send-btn:disabled{opacity:0.5;cursor:not-allowed}
-.routing-info{font-size:0.75rem;color:#4a5568;text-align:center;padding:0.5rem;display:none}
-.routing-info.visible{display:block}
-pre{background:rgba(0,0,0,0.3);padding:1rem;border-radius:8px;overflow-x:auto;font-size:0.8rem;margin:0.5rem 0;border:1px solid rgba(255,255,255,0.05)}
-code{font-family:'JetBrains Mono',monospace}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0f;--bg2:#12121a;--bg3:#1a1a2e;--card:#1e1e32;--border:#2a2a4a;--text:#e8e8f0;--text2:#9090b0;--accent:#6c5ce7;--accent2:#a855f7;--gradient:linear-gradient(135deg,#6c5ce7,#a855f7,#3b82f6);--success:#22c55e;--warning:#f59e0b;--error:#ef4444}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 20%,rgba(108,92,231,0.08) 0%,transparent 50%),radial-gradient(circle at 70% 80%,rgba(168,85,247,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+/* PARTICULES */
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;overflow:hidden}
+.particle{position:absolute;width:3px;height:3px;background:rgba(108,92,231,0.4);border-radius:50%;animation:float linear infinite}
+@keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) rotate(720deg);opacity:0}}
+/* HEADER */
+.header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,15,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px;font-size:1.2rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-icon{width:36px;height:36px;border-radius:10px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:1.2rem;-webkit-text-fill-color:white}
+.header-right{display:flex;align-items:center;gap:16px}
+.model-badge{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:0.75rem;display:flex;align-items:center;gap:6px}
+.model-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.model-count{color:var(--text2);font-size:0.7rem}
+/* CHAT CONTAINER */
+.chat-container{position:relative;z-index:1;max-width:860px;margin:0 auto;padding-top:88px;padding-bottom:120px}
+/* WELCOME */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:2rem}
+.welcome-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);border-radius:100px;padding:6px 16px;font-size:0.8rem;color:var(--accent);margin-bottom:2rem}
+.welcome h1{font-size:3.5rem;font-weight:900;line-height:1.1;margin-bottom:1rem;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.welcome p{font-size:1.15rem;color:var(--text2);max-width:500px;line-height:1.6;margin-bottom:2.5rem}
+.model-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;width:100%;max-width:700px;margin-bottom:2.5rem}
+.model-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:left;transition:all 0.3s;cursor:default}
+.model-card:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 8px 30px rgba(108,92,231,0.15)}
+.model-card .icon{font-size:1.5rem;margin-bottom:4px}
+.model-card .name{font-weight:600;font-size:0.85rem;margin-bottom:2px}
+.model-card .spec{font-size:0.7rem;color:var(--text2)}
+.model-card .bar{height:3px;border-radius:3px;margin-top:6px;transition:width 1s}
+.start-btn{display:inline-flex;align-items:center;gap:10px;background:var(--gradient);border:none;border-radius:100px;padding:14px 32px;font-size:1rem;font-weight:600;color:white;cursor:pointer;transition:all 0.3s;font-family:'Inter',sans-serif}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(108,92,231,0.3)}
+/* MESSAGES */
+.messages{display:flex;flex-direction:column;gap:16px;padding:1rem 1.5rem}
+.msg{display:flex;gap:12px;max-width:85%;animation:msgIn 0.3s ease}
+@keyframes msgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{flex-direction:row-reverse;align-self:flex-end}
+.msg.assistant{align-self:flex-start}
+.msg-avatar{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0}
+.msg.user .msg-avatar{background:var(--gradient);color:white}
+.msg.assistant .msg-avatar{background:var(--bg3);border:1px solid var(--border)}
+.msg-content{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px 18px;font-size:0.92rem;line-height:1.6}
+.msg.user .msg-content{background:rgba(108,92,231,0.15);border-color:rgba(108,92,231,0.3)}
+.model-tag{display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;padding:3px 8px;border-radius:6px;margin-bottom:8px;font-weight:500}
+.model-tag .emoji{font-size:0.8rem}
+.thinking{display:none;align-items:center;gap:12px;padding:1rem 1.5rem;animation:msgIn 0.3s ease}
+.thinking.active{display:flex}
+.thinking-bar{flex:1;height:3px;background:var(--bg3);border-radius:3px;overflow:hidden;position:relative}
+.thinking-bar::after{content:'';position:absolute;top:0;left:-30%;width:30%;height:100%;background:var(--gradient);border-radius:3px;animation:barMove 1.5s ease infinite}
+@keyframes barMove{0%{left:-30%}100%{left:130%}}
+.thinking-text{font-size:0.85rem;color:var(--text2);white-space:nowrap}
+/* INPUT */
+.input-bar{position:fixed;bottom:0;left:0;right:0;z-index:100;background:linear-gradient(180deg,transparent,rgba(10,10,15,0.95) 20%);padding:1.5rem 2rem 1.5rem}
+.input-inner{max-width:860px;margin:0 auto;display:flex;gap:8px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:6px;transition:all 0.3s}
+.input-inner:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,92,231,0.15)}
+.input-inner textarea{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:0.95rem;padding:10px 12px;resize:none;min-height:24px;max-height:120px;line-height:1.5}
+.input-inner textarea::placeholder{color:var(--text2)}
+.input-inner button{width:44px;height:44px;border-radius:12px;border:none;background:var(--gradient);color:white;font-size:1.2rem;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.input-inner button:hover{transform:scale(1.05);box-shadow:0 4px 20px rgba(108,92,231,0.3)}
+.input-inner button:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+/* MODEL SELECTOR */
+.model-selector{position:relative}
+.model-select-btn{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:0.8rem;color:var(--text);cursor:pointer;transition:all 0.2s;font-family:'Inter',sans-serif}
+.model-select-btn:hover{border-color:var(--accent)}
+.model-dropdown{position:absolute;bottom:100%;left:0;margin-bottom:8px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:6px;width:280px;display:none;z-index:50;max-height:300px;overflow-y:auto}
+.model-dropdown.show{display:block}
+.model-option{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:all 0.2s;font-size:0.85rem}
+.model-option:hover{background:var(--bg3)}
+.model-option.active{background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3)}
+.model-option .mo-icon{font-size:1.1rem}
+.model-option .mo-name{font-weight:500}
+.model-option .mo-spec{font-size:0.7rem;color:var(--text2);margin-top:1px}
+.model-option .mo-check{display:none;margin-left:auto;color:var(--accent)}
+.model-option.active .mo-check{display:block}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text2)}
+/* RESPONSIVE */
+@media(max-width:600px){
+  .header{padding:0 1rem}
+  .welcome h1{font-size:2rem}
+  .model-grid{grid-template-columns:repeat(2,1fr)}
+  .msg{max-width:95%}
+  .input-bar{padding:1rem}
+}
 </style>
 </head>
 <body>
+<div id="particles"></div>
 
-<div class="header">
-    <h1>🧠 Smart Chat — AI Factory</h1>
-    <span class="model-badge" id="modelBadge">🤖 Routage automatique</span>
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    AI Factory Router
+  </div>
+  <div class="header-right">
+    <div class="model-badge">
+      <span class="dot"></span>
+      <span id="statusText">Connecté</span>
+      <span class="model-count" id="modelCount">0 modèles</span>
+    </div>
+  </div>
+</header>
+
+<!-- CHAT -->
+<div class="chat-container">
+  <div id="welcome" class="welcome">
+    <div class="welcome-badge">🧠 Multi-Model AI Router</div>
+    <h1>Pose ta question<br>Je choisis le meilleur modèle</h1>
+    <p>Analyse intelligente de ta requête pour sélectionner automatiquement l'IA la plus performante — code, raisonnement, créativité, traduction.</p>
+    <div class="model-grid" id="modelGrid"></div>
+    <button class="start-btn" onclick="document.getElementById('chatInput').focus()">
+      ✨ Commencer à discuter
+    </button>
+  </div>
+  <div id="messages" class="messages" style="display:none"></div>
+  <div id="thinking" class="thinking">
+    <div class="thinking-bar"></div>
+    <span class="thinking-text" id="thinkingText">Réflexion en cours...</span>
+  </div>
 </div>
 
-<div class="chat-container" id="chatContainer">
-    <div class="message assistant" style="align-self:center;max-width:60%;text-align:center;background:rgba(108,92,231,0.05);border-color:rgba(108,92,231,0.1)">
-        <div style="font-size:2rem;margin-bottom:0.5rem">🧠</div>
-        <div style="font-weight:500;margin-bottom:0.25rem">Smart Chat prêt</div>
-        <div style="font-size:0.8rem;color:#8b8fa3">
-            Je choisis automatiquement le meilleur modèle pour chaque requête.<br>
-            Code → 💻 Qwen · Raisonnement → ⚡ Phi-4 · Général → 🎯 Gemma · Créatif → 💬 Llama
+<!-- INPUT -->
+<div class="input-bar">
+  <div class="input-inner">
+    <div class="model-selector">
+      <button class="model-select-btn" id="modelSelectBtn" onclick="toggleModelDropdown()">
+        <span>⚡</span>
+        <span id="selectedModelName">Auto</span>
+        <span style="font-size:0.6rem">▼</span>
+      </button>
+      <div class="model-dropdown" id="modelDropdown">
+        <div class="model-option active" data-model="auto" onclick="selectModel('auto',this)">
+          <span class="mo-icon">🤖</span>
+          <div><div class="mo-name">Auto (Recommandé)</div><div class="mo-spec">Choisit le meilleur modèle</div></div>
+          <span class="mo-check">✓</span>
         </div>
+      </div>
     </div>
-</div>
-
-<div class="input-area">
-    <div class="routing-info" id="routingInfo">🧠 Analyse du message...</div>
-    <div class="input-wrapper">
-        <input type="text" id="chatInput" placeholder="Pose ta question..." autofocus>
-        <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
-    </div>
+    <textarea id="chatInput" placeholder="Pose ta question... (Ex: 'Crée un site web avec React' ou 'Explique la théorie de la relativité')" rows="1" onkeydown="handleKey(event)"></textarea>
+    <button id="sendBtn" onclick="sendMessage()">➤</button>
+  </div>
 </div>
 
 <script>
-let isProcessing = false;
-const chatContainer = document.getElementById('chatContainer');
-const chatInput = document.getElementById('chatInput');
-const sendBtn = document.getElementById('sendBtn');
-const modelBadge = document.getElementById('modelBadge');
-const routingInfo = document.getElementById('routingInfo');
+const MODELS = {};
+const MSG_HISTORY = [];
+let isStreaming = false;
 
-chatInput.addEventListener('keydown', e => { if(e.key === 'Enter') sendMessage(); });
+// PARTICULES
+function createParticles() {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 50; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+    p.style.animationDuration = (15 + Math.random() * 25) + 's';
+    p.style.animationDelay = -Math.random() * 30 + 's';
+    p.style.opacity = 0.1 + Math.random() * 0.4;
+    container.appendChild(p);
+  }
+}
+createParticles();
 
-function addMessage(content, role, model = null) {
-    const div = document.createElement('div');
-    div.className = `message ${role}`;
-    if (model) {
-        const modelColors = {coder:'code',phi:'reasoning',deepseek:'thinking',gemma:'general',llama:'creative'};
-        const cls = Object.entries(modelColors).find(([k]) => model.includes(k))?.[1] || '';
-        div.innerHTML = `<div class="model-tag ${cls}">🎯 ${model}</div><div class="msg-content">${content}</div>`;
-    } else {
-        div.innerHTML = `<div class="msg-content">${content}</div>`;
-    }
-    chatContainer.appendChild(div);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    return div;
+// AUTO-RESIZE TEXTAREA
+document.getElementById('chatInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// KEY HANDLER
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
 }
 
-function showTyping() {
-    const div = document.createElement('div');
-    div.className = 'message assistant';
-    div.id = 'typingIndicator';
-    div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-    chatContainer.appendChild(div);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+// TOGGLE MODEL DROPDOWN
+function toggleModelDropdown() {
+  document.getElementById('modelDropdown').classList.toggle('show');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.model-selector')) {
+    document.getElementById('modelDropdown').classList.remove('show');
+  }
+});
+
+function selectModel(modelId, el) {
+  document.querySelectorAll('.model-option').forEach(o => o.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const name = modelId === 'auto' ? 'Auto' : (MODELS[modelId]?.name || modelId);
+  document.getElementById('selectedModelName').textContent = name;
+  document.getElementById('modelDropdown').classList.remove('show');
 }
 
-function removeTyping() {
-    const el = document.getElementById('typingIndicator');
-    if(el) el.remove();
+// LOAD MODELS
+async function loadModels() {
+  try {
+    const r = await fetch('/api/models');
+    const data = await r.json();
+    const grid = document.getElementById('modelGrid');
+    const dropdown = document.getElementById('modelDropdown');
+    grid.innerHTML = '';
+    
+    data.models.forEach(m => {
+      MODELS[m.id] = m;
+      // Card
+      const card = document.createElement('div');
+      card.className = 'model-card';
+      const barColor = m.color || '#6c5ce7';
+      card.innerHTML = '<div class="icon">' + (m.emoji || '🧠') + '</div><div class="name">' + m.name + '</div><div class="spec">' + m.specialty + '</div><div class="bar" style="width:0%;background:' + barColor + '"></div>';
+      grid.appendChild(card);
+      setTimeout(() => { card.querySelector('.bar').style.width = (m.quality * 10) + '%'; }, 200);
+      
+      // Dropdown option
+      const opt = document.createElement('div');
+      opt.className = 'model-option';
+      opt.dataset.model = m.id;
+      opt.onclick = function() { selectModel(m.id, this); };
+      opt.innerHTML = '<span class="mo-icon">' + (m.emoji || '🧠') + '</span><div><div class="mo-name">' + m.name + '</div><div class="mo-spec">' + m.specialty + ' · ' + m.size + '</div></div><span class="mo-check">✓</span>';
+      dropdown.appendChild(opt);
+    });
+    
+    document.getElementById('modelCount').textContent = data.available + '/' + data.models.length + ' modèles';
+  } catch(e) {
+    document.getElementById('statusText').textContent = '⚠️ Erreur';
+  }
 }
+loadModels();
 
+// SEND MESSAGE
 async function sendMessage() {
-    const text = chatInput.value.trim();
-    if(!text || isProcessing) return;
-    
-    chatInput.value = '';
-    addMessage(text, 'user');
-    showTyping();
-    isProcessing = true;
-    sendBtn.disabled = true;
-    routingInfo.classList.add('visible');
-    routingInfo.textContent = '🧠 Analyse du message pour choisir le meilleur modèle...';
-    
-    try {
-        const resp = await fetch('/api/chat', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({message: text})
-        });
-        
-        if(!resp.ok) throw new Error('Erreur serveur');
-        
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let fullResponse = '';
-        let currentModel = '';
-        
-        removeTyping();
-        
-        // Créer le message assistant
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message assistant';
-        const modelTag = document.createElement('div');
-        modelTag.className = 'model-tag';
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'msg-content';
-        msgDiv.appendChild(modelTag);
-        msgDiv.appendChild(contentDiv);
-        chatContainer.appendChild(msgDiv);
-        
-        while(true) {
-            const {done, value} = await reader.read();
-            if(done) break;
-            
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\\n').filter(l => l.trim());
-            
-            for(const line of lines) {
-                if(line.startsWith('data: ')) {
-                    const data = JSON.parse(line.slice(6));
-                    if(data.model) {
-                        currentModel = data.model;
-                        const emoji = data.model.includes('coder') ? '💻' : 
-                                     data.model.includes('phi') ? '⚡' :
-                                     data.model.includes('deepseek') ? '🧠' :
-                                     data.model.includes('gemma') ? '🎯' : '💬';
-                        modelTag.innerHTML = `${emoji} ${data.model}`;
-                        modelBadge.classList.add('visible');
-                        routingInfo.classList.remove('visible');
-                    }
-                    if(data.content) {
-                        fullResponse += data.content;
-                        contentDiv.innerHTML = marked(fullResponse);
-                        chatContainer.scrollTop = chatContainer.scrollHeight;
-                    }
-                    if(data.done) {
-                        modelTag.innerHTML += ' ✅';
-                    }
-                }
-            }
-        }
-    } catch(e) {
-        removeTyping();
-        addMessage('❌ Erreur: ' + e.message, 'assistant');
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isStreaming) return;
+  
+  input.value = '';
+  input.style.height = 'auto';
+  
+  // Hide welcome
+  document.getElementById('welcome').style.display = 'none';
+  const msgContainer = document.getElementById('messages');
+  msgContainer.style.display = 'flex';
+  
+  // Add user message
+  addMessage(text, 'user');
+  
+  // Show thinking
+  const thinking = document.getElementById('thinking');
+  thinking.classList.add('active');
+  document.getElementById('thinkingText').textContent = '🔍 Analyse de la requête...';
+  
+  isStreaming = true;
+  document.getElementById('sendBtn').disabled = true;
+  
+  try {
+    // Analyze
+    const selectedBtn = document.querySelector('.model-option.active');
+    let modelId = 'auto';
+    if (selectedBtn && selectedBtn.dataset.model !== 'auto') {
+      modelId = selectedBtn.dataset.model;
     }
     
-    isProcessing = false;
-    sendBtn.disabled = false;
+    if (modelId === 'auto') {
+      const analyzeR = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({query: text})
+      });
+      const analysis = await analyzeR.json();
+      modelId = analysis.model;
+      document.getElementById('thinkingText').textContent = '🧠 ' + (analysis.model_info?.emoji || '') + ' ' + (analysis.model_info?.name || modelId) + ' · Confiance ' + analysis.confidence + '%';
+      await new Promise(r => setTimeout(r, 600));
+    } else {
+      document.getElementById('thinkingText').textContent = '⚡ Génération en cours...';
+    }
+    
+    // Generate
+    document.getElementById('thinkingText').textContent = '✍️ Génération de la réponse...';
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'msg assistant';
+    const avatarColor = MODELS[modelId]?.color || '#6c5ce7';
+    msgDiv.innerHTML = '<div class="msg-avatar" style="background:' + avatarColor + '20;border:1px solid ' + avatarColor + '40">' + (MODELS[modelId]?.emoji || '🤖') + '</div><div class="msg-content"><div class="model-tag" style="background:' + avatarColor + '20;color:' + avatarColor + '"><span class="emoji">' + (MODELS[modelId]?.emoji || '🤖') + '</span> ' + (MODELS[modelId]?.name || modelId) + '</div><div class="response-text"></div></div>';
+    msgContainer.appendChild(msgDiv);
+    
+    const respText = msgDiv.querySelector('.response-text');
+    
+    // Stream response
+    const streamR = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({query: text, model: modelId})
+    });
+    
+    const reader = streamR.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      
+      // Process SSE
+      const lines = buffer.split('\\n');
+      buffer = lines.pop() || '';
+      
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.text) {
+              respText.textContent += data.text;
+              msgContainer.scrollTop = msgContainer.scrollHeight;
+              window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+            }
+          } catch(e) {}
+        }
+      }
+    }
+    
+  } catch(e) {
+    addMessage('❌ Erreur: ' + e.message, 'assistant');
+  }
+  
+  thinking.classList.remove('active');
+  isStreaming = false;
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('chatInput').focus();
 }
 
-function marked(text) {
-    return text.replace(/```(\\w*)\\n([\\s\\S]*?)```/g, '<pre><code>$2</code></pre>')
-               .replace(/`([^`]+)`/g, '<code>$1</code>')
-               .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
-               .replace(/\\n/g, '<br>');
+function addMessage(text, role) {
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if (role === 'user') {
+    div.innerHTML = '<div class="msg-content">' + escapeHtml(text) + '</div><div class="msg-avatar" style="background:var(--gradient);color:white">👤</div>';
+  } else {
+    div.innerHTML = '<div class="msg-avatar" style="background:var(--bg3);border:1px solid var(--border)">🤖</div><div class="msg-content">' + escapeHtml(text) + '</div>';
+  }
+  container.appendChild(div);
+  window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+}
+
+function escapeHtml(t) {
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
 }
 </script>
 </body>
-</html>
-"""
-
-
-# ============================================
-# ROUTAGE INTELLIGENT
-# ============================================
-async def classify_intent(message: str) -> str:
-    """Utilise un petit modèle pour classifier rapidement l'intention."""
-    prompt = f"""Analyse ce message et réponds UNIQUEMENT par le nom du modèle le plus adapté parmi cette liste:
-- qwen2.5-coder:7b (pour code, programmation, debug)
-- phi4-mini:3.8b (pour analyse rapide, logique, maths, sciences)
-- deepseek-r1:7b (pour problèmes complexes, stratégie, architecture)
-- gemma4:4b (pour général, traduction, résumé, conseils)
-- llama3.2:3b (pour créatif, écriture, humour, discussion)
-
-Message: {message[:300]}
-Modèle:"""
-
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(f"{OLLAMA_URL}/api/generate", json={
-                "model": ROUTER_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "options": {"num_predict": 20, "temperature": 0.1}
-            })
-            if resp.status_code == 200:
-                result = resp.json().get("response", "").strip().lower()
-                # Trouver le meilleur modèle
-                for model in MODEL_ROUTES:
-                    if model.split(" ")[-1] in result or model.split("/")[-1].split(":")[0] in result:
-                        return model
-                # Fallback: keyword matching
-                best_model = "🎯 gemma4:4b"
-                best_score = 0
-                for model, config in MODEL_ROUTES.items():
-                    score = sum(1 for kw in config["keywords"] if kw.lower() in message.lower())
-                    if score > best_score:
-                        best_score = score
-                        best_model = model
-                return best_model
-    except Exception as e:
-        print(f"[ROUTER] Classification error: {e}")
-    
-    # Fallback
-    return "🎯 gemma4:4b"
-
-
-async def stream_model(model_name: str, messages: list):
-    """Stream la réponse du modèle choisi."""
-    model_id = model_name.split(" ")[-1]
-    
-    try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            # Récupérer le dernier message utilisateur
-            last_msg = messages[-1]["content"] if messages else ""
-            
-            async with client.stream("POST", f"{OLLAMA_URL}/api/generate", json={
-                "model": model_id,
-                "prompt": f"Tu es un assistant IA utile, précis et concis. Réponds en français.\n\nUtilisateur: {last_msg}\n\nAssistant:",
-                "stream": True,
-                "options": {"temperature": 0.7, "num_predict": 2048}
-            }) as resp:
-                async for line in resp.aiter_lines():
-                    if line.strip():
-                        try:
-                            data = json.loads(line)
-                            if data.get("response"):
-                                yield f"data: {json.dumps({'content': data['response'], 'model': model_id})}\n\n"
-                            if data.get("done"):
-                                yield f"data: {json.dumps({'done': True, 'model': model_id})}\n\n"
-                                return
-                        except json.JSONDecodeError:
-                            continue
-    except Exception as e:
-        yield f"data: {json.dumps({'error': str(e)})}\n\n"
-
+</html>"""
 
 # ============================================
 # ROUTES API
 # ============================================
-@app.get("/", response_class=HTMLResponse)
-async def index():
-    return HTMLResponse(HTML_PAGE)
 
 @app.get("/api/models")
-async def list_models():
-    """Liste les modèles disponibles."""
-    models = []
-    try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            resp = await client.get(f"{OLLAMA_URL}/api/tags")
-            if resp.status_code == 200:
-                for m in resp.json().get("models", []):
-                    models.append(m["name"])
-    except Exception:
-        pass
-    return {"models": models, "router_model": ROUTER_MODEL, "routes": list(MODEL_ROUTES.keys())}
+async def api_models():
+    available = await get_available_models()
+    models_list = []
+    for mid, info in MODELS.items():
+        models_list.append({
+            "id": mid,
+            "name": info["name"],
+            "emoji": info["emoji"],
+            "color": info["color"],
+            "specialty": info["specialty"],
+            "speed": info["speed"],
+            "size": info["size"],
+            "quality": info["quality"],
+            "available": mid in available
+        })
+    return {"models": models_list, "available": sum(1 for m in models_list if m["available"])}
+
+@app.post("/api/analyze")
+async def api_analyze(data: dict):
+    query = data.get("query", "")
+    result = await analyze_query(query)
+    return result
 
 @app.post("/api/chat")
-async def chat(request: Request):
-    """Point d'entrée unique du chat intelligent."""
-    data = await request.json()
-    message = data.get("message", "")
+async def api_chat(data: dict, request: Request):
+    query = data.get("query", "")
+    model = data.get("model", ROUTER_MODEL)
     
-    if not message:
-        return JSONResponse({"error": "Message requis"}, status_code=400)
+    async def stream():
+        async for chunk in generate_response(query, model):
+            if chunk:
+                yield f"data: {json.dumps({'text': chunk})}\n\n"
+        yield "data: [DONE]\n\n"
     
-    async def generate():
-        # 1. Router le message vers le meilleur modèle
-        yield f"data: {json.dumps({'info': '🧠 Analyse...'})}\n\n"
-        best_model = await classify_intent(message)
-        yield f"data: {json.dumps({'info': f'🎯 Routage vers {best_model}'})}\n\n"
-        
-        # 2. Stream la réponse
-        async for chunk in stream_model(best_model, [{"role": "user", "content": message}]):
-            yield chunk
-    
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
+@app.get("/{path:path}")
+async def serve_spa():
+    return HTMLResponse(HTML_PAGE)
+
+@app.get("/")
+async def root():
+    return HTMLResponse(HTML_PAGE)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8765"))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    import uvicorn
+    print(f"\n🚀 AI Factory Smart Router — http://0.0.0.0:{PORT}")
+    print(f"   Ollama: {OLLAMA_URL}")
+    print(f"   Routeur: {ROUTER_MODEL}")
+    print(f"   Modèles: {len(MODELS)}\n")
+    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="warning")
