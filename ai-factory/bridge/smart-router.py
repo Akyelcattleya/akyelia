@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
 ROUTER_MODEL = os.getenv("ROUTER_MODEL", "phi4-mini:3.8b")
 PORT = int(os.getenv("PORT", "8765"))
+WEB_SEARCH_ENABLED = True
 
 # Tous les modèles disponibles avec leurs specs
 MODELS = {
@@ -167,11 +168,46 @@ async def analyze_query(query: str) -> dict:
         "all_scores": {m: s for m, s in sorted(scores.items(), key=lambda x: x[1], reverse=True)}
     }
 
-async def generate_response(query: str, model: str):
+async def web_search(query: str) -> str:
+    """Cherche sur le web via DuckDuckGo"""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            url = "https://lite.duckduckgo.com/lite/"
+            r = await client.post(url, data={"q": query}, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code == 200:
+                import re
+                results = re.findall(r'<a[^>]*class="[^"]*result-link[^"]*"[^>]*href="([^"]+)"[^>]*>([^<]+)</a>', r.text)
+                snippets = re.findall(r'<td[^>]*class="[^"]*result-snippet[^"]*"[^>]*>(.*?)</td>', r.text, re.DOTALL)
+                output = ""
+                for i, (url, title) in enumerate(results[:5]):
+                    snippet = snippets[i] if i < len(snippets) else ""
+                    snippet = re.sub(r'<[^>]+>', '', snippet).strip()
+                    output += f"{i+1}. {title}\n   URL: {url}\n   {snippet}\n\n"
+                return output.strip() or ""
+    except:
+        return ""
+    return ""
+
+async def generate_response(query: str, model: str, search: bool = False):
     """Génère la réponse via Ollama"""
+    context = ""
+    if search or any(w in query.lower() for w in ["actualité", "dernières", "news", "aujourd"hui", "2026", "2025", "récent", "prix", "météo", "cours", "google", "recherche web", "internet", "va en ligne"]):
+        context = await web_search(query)
+    
     try:
         async with httpx.AsyncClient(timeout=120) as client:
-            prompt = f"""Tu es un assistant IA expert, utile et précis. 
+            if context:
+                prompt = f"""Tu es un assistant IA expert avec accès Internet. 
+Utilise les résultats de recherche web ci-dessous pour répondre à la question.
+
+🌐 RÉSULTATS DE RECHERCHE WEB :
+{context}
+
+📝 QUESTION: {query}
+
+Réponds de façon claire et complète, en citant tes sources si possible."""
+            else:
+                prompt = f"""Tu es un assistant IA expert, utile et précis. 
 Réponds à la question suivante de façon claire, structurée et complète.
 
 Question: {query}
@@ -606,9 +642,10 @@ async def api_analyze(data: dict):
 async def api_chat(data: dict, request: Request):
     query = data.get("query", "")
     model = data.get("model", ROUTER_MODEL)
+    search = data.get("search", True)
     
     async def stream():
-        async for chunk in generate_response(query, model):
+        async for chunk in generate_response(query, model, search=search):
             if chunk:
                 yield f"data: {json.dumps({'text': chunk})}\n\n"
         yield "data: [DONE]\n\n"

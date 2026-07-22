@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏭 AI Factory — Portail</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#07070d;--bg2:#0e0e18;--bg3:#161625;--card:#1c1c30;--border:#282840;--text:#e8e8f0;--text2:#8080a0;--accent:#6c5ce7;--accent2:#a855f7;--gradient:linear-gradient(135deg,#6c5ce7,#a855f7,#3b82f6);--success:#22c55e;--warning:#f59e0b}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at 20% 30%,rgba(108,92,231,0.08) 0%,transparent 50%),radial-gradient(circle at 80% 70%,rgba(168,85,247,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+#particles{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.particle{position:absolute;width:2px;height:2px;background:rgba(108,92,231,0.3);border-radius:50%;animation:float linear infinite}
+@keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0}10%{opacity:1}90%{opacity:1}100%{transform:translateY(-10vh) rotate(720deg);opacity:0}}
+/* HEADER */
+.header{position:fixed;top:0;left:0;right:0;z-index:50;background:rgba(7,7,13,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:12px;font-size:1.2rem;font-weight:800;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-icon{width:36px;height:36px;border-radius:10px;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:1.1rem;-webkit-text-fill-color:white}
+.header-actions{display:flex;gap:12px;align-items:center}
+.header-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:0.85rem;font-weight:500;text-decoration:none;transition:all 0.2s;background:var(--bg3);border:1px solid var(--border);color:var(--text)}
+.header-btn:hover{background:var(--card);border-color:var(--accent);transform:translateY(-1px)}
+/* HERO */
+.hero{position:relative;z-index:1;padding:120px 2rem 60px;text-align:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(108,92,231,0.15);border:1px solid rgba(108,92,231,0.3);border-radius:100px;padding:6px 16px;font-size:0.8rem;color:var(--accent);margin-bottom:1.5rem}
+.hero h1{font-size:3.5rem;font-weight:900;line-height:1.1;margin-bottom:1rem;background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:1.1rem;color:var(--text2);max-width:500px;margin:0 auto 2rem;line-height:1.6}
+/* TABS */
+.tabs{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:0 2rem 4rem}
+.tab-nav{display:flex;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:4px;margin-bottom:2rem;overflow-x:auto}
+.tab-btn{flex:1;padding:10px 18px;border:none;border-radius:10px;font-size:0.85rem;font-weight:500;cursor:pointer;transition:all 0.3s;background:transparent;color:var(--text2);white-space:nowrap;font-family:'Inter',sans-serif}
+.tab-btn:hover{color:var(--text);background:var(--card)}
+.tab-btn.active{background:var(--gradient);color:white;box-shadow:0 4px 15px rgba(108,92,231,0.3)}
+.tab-content{display:none;animation:fadeIn 0.3s ease}
+.tab-content.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+/* SERVICE GRID */
+.service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.service-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;transition:all 0.3s;text-decoration:none;color:var(--text);display:block;position:relative;overflow:hidden}
+.service-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gradient);opacity:0;transition:opacity 0.3s}
+.service-card:hover{transform:translateY(-4px);border-color:var(--accent);box-shadow:0 12px 40px rgba(108,92,231,0.15)}
+.service-card:hover::before{opacity:1}
+.service-card .card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.service-card .icon{font-size:2rem}
+.service-card .status-badge{display:flex;align-items:center;gap:4px;font-size:0.7rem;padding:3px 8px;border-radius:20px;font-weight:500}
+.status-badge.online{background:rgba(34,197,94,0.15);color:var(--success);border:1px solid rgba(34,197,94,0.3)}
+.status-badge.offline{background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3)}
+.status-dot{width:5px;height:5px;border-radius:50%;display:inline-block}
+.status-dot.online{background:var(--success);animation:pulse 2s infinite}
+.status-dot.offline{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+.service-card h3{font-size:1.05rem;font-weight:600;margin-bottom:4px}
+.service-card p{font-size:0.85rem;color:var(--text2);line-height:1.5;margin-bottom:12px}
+.service-card .port-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:0.75rem;font-family:'SF Mono','JetBrains Mono',monospace;color:var(--text2)}
+.service-card .port-tag:hover{color:var(--accent);border-color:var(--accent)}
+/* MODEL SECTION */
+.model-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.model-item{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:16px;transition:all 0.3s;cursor:default}
+.model-item:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:0 4px 20px rgba(108,92,231,0.1)}
+.model-item .mi-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.model-item .mi-icon{font-size:1.3rem}
+.model-item .mi-name{font-weight:600;font-size:0.9rem}
+.model-item .mi-installed{display:none;margin-left:auto;font-size:0.7rem;color:var(--success);background:rgba(34,197,94,0.1);padding:2px 8px;border-radius:10px}
+.model-item .mi-installed.yes{display:inline}
+.model-item .mi-spec{font-size:0.78rem;color:var(--text2);display:flex;gap:8px;align-items:center}
+.model-item .mi-spec span{background:var(--bg2);padding:2px 6px;border-radius:4px;font-size:0.7rem}
+/* FOOTER */
+.footer{position:relative;z-index:1;text-align:center;padding:2rem;color:var(--text2);font-size:0.8rem;border-top:1px solid var(--border)}
+.footer a{color:var(--accent);text-decoration:none}
+.footer a:hover{text-decoration:underline}
+/* RESPONSIVE */
+@media(max-width:600px){
+  .hero h1{font-size:2rem}.hero{padding:100px 1rem 40px}
+  .tabs{padding:0 1rem 2rem}
+  .service-grid{grid-template-columns:1fr}
+  .model-grid{grid-template-columns:repeat(2,1fr)}
+  .tab-btn{font-size:0.75rem;padding:8px 12px}
+}
+</style>
+</head>
+<body>
+<div id="particles"></div>
+
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">⚙️</div>
+    AI Factory
+  </div>
+  <div class="header-actions">
+    <a href="http://148.230.98.203:8765" class="header-btn" target="_blank">💬 Smart Chat</a>
+    <a href="http://148.230.98.203:3000" class="header-btn" target="_blank">🤖 OpenHands</a>
+    <a href="http://148.230.98.203:3001" class="header-btn" target="_blank">💬 WebUI</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-badge">⚡ 8 modèles IA · 6 services · 100% gratuit</div>
+  <h1>Ton Usine IA<br>Privée & Surpuissante</h1>
+  <p>Un chat unique qui choisit automatiquement le meilleur modèle pour chaque requête. Tout sur ton VPS, 100% gratuit.</p>
+</section>
+
+<div class="tabs">
+  <nav class="tab-nav" id="tabNav">
+    <button class="tab-btn active" onclick="switchTab('services')">🚀 Services</button>
+    <button class="tab-btn" onclick="switchTab('chat')">💬 Smart Chat</button>
+    <button class="tab-btn" onclick="switchTab('models')">🧠 Modèles IA</button>
+    <button class="tab-btn" onclick="switchTab('tools')">🛠️ Outils</button>
+  </nav>
+
+  <!-- TAB 1: SERVICES -->
+  <div class="tab-content active" id="tab-services">
+    <div class="service-grid" id="serviceGrid"></div>
+  </div>
+
+  <!-- TAB 2: SMART CHAT -->
+  <div class="tab-content" id="tab-chat">
+    <div style="text-align:center;padding:3rem 1rem">
+      <div style="font-size:4rem;margin-bottom:1rem">💬</div>
+      <h2 style="font-size:1.5rem;margin-bottom:0.5rem">Smart Router — Le chat unique</h2>
+      <p style="color:var(--text2);margin-bottom:2rem;max-width:500px;margin-left:auto;margin-right:auto">
+        Pose ta question, le Smart Router choisit automatiquement le meilleur modèle parmi les 8 disponibles.
+      </p>
+      <a href="http://148.230.98.203:8765" target="_blank" style="display:inline-flex;align-items:center;gap:10px;background:var(--gradient);border:none;border-radius:100px;padding:14px 32px;font-size:1rem;font-weight:600;color:white;text-decoration:none;transition:all 0.3s"
+         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 8px 30px rgba(108,92,231,0.3)'"
+         onmouseout="this.style.transform='';this.style.boxShadow=''">
+        ✨ Ouvrir le Smart Chat →
+      </a>
+    </div>
+  </div>
+
+  <!-- TAB 3: MODELS -->
+  <div class="tab-content" id="tab-models">
+    <div style="margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+      <h2 style="font-size:1.2rem;font-weight:600">🧠 Modèles IA installés</h2>
+      <span id="modelCount" style="font-size:0.85rem;color:var(--text2)">Chargement...</span>
+    </div>
+    <div class="model-grid" id="modelGrid"></div>
+  </div>
+
+  <!-- TAB 4: TOOLS -->
+  <div class="tab-content" id="tab-tools">
+    <div class="service-grid">
+      <a href="http://148.230.98.203:5678" target="_blank" class="service-card">
+        <div class="card-top"><div class="icon">⚡</div><span class="status-badge online"><span class="status-dot online"></span> Actif</span></div>
+        <h3>n8n — Workflows</h3>
+        <p>Automatisation visuelle : connecte tes apps, APIs et IA sans coder.</p>
+        <span class="port-tag">port 5678</span>
+      </a>
+      <a href="http://148.230.98.203:3002" target="_blank" class="service-card">
+        <div class="card-top"><div class="icon">🌐</div><span class="status-badge online"><span class="status-dot online"></span> Actif</span></div>
+        <h3>Browserless — Navigation</h3>
+        <p>Navigateur headless pour le scraping, l'automatisation web et les bots.</p>
+        <span class="port-tag">port 3002</span>
+      </a>
+      <div class="service-card" style="cursor:default">
+        <div class="card-top"><div class="icon">🧠</div><span class="status-badge online"><span class="status-dot online"></span> Local</span></div>
+        <h3>Ollama — Moteur IA</h3>
+        <p>Inférence locale pour tous les modèles. API compatible OpenAI.</p>
+        <span class="port-tag">port 11434</span>
+      </div>
+      <div class="service-card" style="cursor:default">
+        <div class="card-top"><div class="icon">💾</div><span class="status-badge online"><span class="status-dot online"></span> Local</span></div>
+        <h3>Qdrant — Mémoire</h3>
+        <p>Base vectorielle pour le RAG, les souvenirs et la recherche sémantique.</p>
+        <span class="port-tag">port 6333</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <p>🏭 <strong>AI Factory</strong> — Propulsé par <a href="https://ollama.ai" target="_blank">Ollama</a>, <a href="https://openwebui.com" target="_blank">Open WebUI</a>, <a href="https://www.all-hands.dev" target="_blank">OpenHands</a> &middot; 100% Open Source &middot; <strong>Gratuit & Illimité</strong></p>
+</footer>
+
+<script>
+// PARTICULES
+(function(){const c=document.getElementById('particles');for(let i=0;i<40;i++){const p=document.createElement('div');p.className='particle';p.style.left=Math.random()*100+'%';p.style.width=p.style.height=(1+Math.random()*2)+'px';p.style.animationDuration=(20+Math.random()*30)+'s';p.style.animationDelay=-Math.random()*40+'s';c.appendChild(p)}})();
+
+// TABS
+function switchTab(id){document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');event.target.classList.add('active')}
+
+// SERVICES
+const SERVICES=[
+  {icon:'🤖',name:'OpenHands',desc:'Agent IA architecte — code, déploie et gère tes projets autonomes.',port:3000,url:'http://148.230.98.203:3000'},
+  {icon:'💬',name:'Open WebUI',desc:'Chat IA privé type ChatGPT avec RAG, documents et choix du modèle.',port:3001,url:'http://148.230.98.203:3001'},
+  {icon:'⚡',name:'Smart Router',desc:'Chat unique qui choisit automatiquement le meilleur modèle IA.',port:8765,url:'http://148.230.98.203:8765'},
+  {icon:'⚡',name:'n8n',desc:'Automatisation visuelle — connecte tout sans coder.',port:5678,url:'http://148.230.98.203:5678'},
+  {icon:'🌐',name:'Browserless',desc:'Navigateur headless pour scraping et bots.',port:3002,url:'http://148.230.98.203:3002'},
+  {icon:'🧠',name:'Ollama API',desc:'API OpenAI-compatible pour tous les modèles locaux.',port:11434,url:'#'},
+  {icon:'💾',name:'Qdrant',desc:'Base vectorielle pour la mémoire à long terme.',port:6333,url:'#'},
+];
+
+const grid=document.getElementById('serviceGrid');
+SERVICES.forEach(s=>{
+  const card=document.createElement('a');
+  card.className='service-card';
+  card.href=s.url;
+  card.target=s.url!=='#'?'_blank':'';
+  card.innerHTML='<div class="card-top"><div class="icon">'+s.icon+'</div><span class="status-badge online"><span class="status-dot online"></span> Opérationnel</span></div><h3>'+s.name+'</h3><p>'+s.desc+'</p><span class="port-tag">port '+s.port+'</span>';
+  grid.appendChild(card);
+});
+
+// MODELS
+const MODELS=[
+  {emoji:'💻',name:'Qwen 2.5 Coder 7B',spec:'Code & Programmation',size:'4.7GB',speed:'Moyen'},
+  {emoji:'⚡',name:'Phi-4 Mini 3.8B',spec:'Raisonnement & Logique',size:'2.5GB',speed:'Très rapide'},
+  {emoji:'🧠',name:'Qwen 3.5 4B',spec:'Polyvalent Général',size:'3.4GB',speed:'Rapide'},
+  {emoji:'🦙',name:'Llama 3.2 3B',spec:'Chat & Créativité',size:'2GB',speed:'Très rapide'},
+  {emoji:'🌐',name:'Gemma 2 2B',spec:'Multilingue',size:'1.5GB',speed:'Ultra rapide'},
+  {emoji:'🔬',name:'DeepSeek R1 7B',spec:'Recherche Approfondie',size:'4.5GB',speed:'Lent'},
+  {emoji:'👁️',name:'LLaVA 7B',spec:'Vision & Images',size:'4.5GB',speed:'Moyen'},
+  {emoji:'📐',name:'Nomic Embed Text',spec:'Embeddings RAG',size:'0.3GB',speed:'Instantané'},
+];
+const mGrid=document.getElementById('modelGrid');
+MODELS.forEach(m=>{
+  const item=document.createElement('div');
+  item.className='model-item';
+  item.innerHTML='<div class="mi-top"><span class="mi-icon">'+m.emoji+'</span><span class="mi-name">'+m.name+'</span><span class="mi-installed yes">✅</span></div><div class="mi-spec"><span>'+m.spec+'</span><span>'+m.size+'</span><span>'+m.speed+'</span></div>';
+  mGrid.appendChild(item);
+});
+document.getElementById('modelCount').textContent='8 modèles disponibles';
+
+// Vérifier le statut des services
+async function checkServices(){SERVICES.forEach(async(s,i)=>{try{let r=await fetch(s.url,{mode:'no-cors'});document.querySelectorAll('.service-card .status-badge')[i].innerHTML='<span class="status-dot online"></span> En ligne'}catch(e){}})}
+</script>
+</body>
+</html>
